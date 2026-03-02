@@ -510,6 +510,99 @@ def set_drum_pad_solo(control_surface, params):
     }
 
 
+def delete_master_device(control_surface, params):
+    """Delete a device from the master track."""
+    device_index = params.get("device_index")
+    if device_index is None:
+        raise ValueError("Missing required parameter: device_index")
+    device_index = int(device_index)
+    song = control_surface.song()
+    devices = song.master_track.devices
+    if device_index < 0 or device_index >= len(devices):
+        raise ValueError("Device index {0} out of range (0-{1})".format(
+            device_index, len(devices) - 1))
+    device_name = devices[device_index].name
+    song.master_track.delete_device(device_index)
+    return {"device_index": device_index, "deleted_device": device_name}
+
+
+def delete_return_device(control_surface, params):
+    """Delete a device from a return track."""
+    return_index = params.get("return_index")
+    device_index = params.get("device_index")
+    if return_index is None:
+        raise ValueError("Missing required parameter: return_index")
+    if device_index is None:
+        raise ValueError("Missing required parameter: device_index")
+    return_index = int(return_index)
+    device_index = int(device_index)
+    song = control_surface.song()
+    if return_index < 0 or return_index >= len(song.return_tracks):
+        raise ValueError("Return index {0} out of range (0-{1})".format(
+            return_index, len(song.return_tracks) - 1))
+    track = song.return_tracks[return_index]
+    if device_index < 0 or device_index >= len(track.devices):
+        raise ValueError("Device index {0} out of range (0-{1})".format(
+            device_index, len(track.devices) - 1))
+    device_name = track.devices[device_index].name
+    track.delete_device(device_index)
+    return {"return_index": return_index, "device_index": device_index, "deleted_device": device_name}
+
+
+def move_device(control_surface, params):
+    """Move a device to a new position in a track's device chain."""
+    song = control_surface.song()
+    track_index = params.get("track_index")
+    device_index = params.get("device_index")
+    new_index = params.get("new_index")
+    if track_index is None:
+        raise ValueError("Missing required parameter: track_index")
+    if device_index is None:
+        raise ValueError("Missing required parameter: device_index")
+    if new_index is None:
+        raise ValueError("Missing required parameter: new_index")
+    track_index = int(track_index)
+    device_index = int(device_index)
+    new_index = int(new_index)
+    if track_index < 0 or track_index >= len(song.tracks):
+        raise ValueError("Track index {0} out of range (0-{1})".format(
+            track_index, len(song.tracks) - 1))
+    track = song.tracks[track_index]
+    if device_index < 0 or device_index >= len(track.devices):
+        raise ValueError("Device index {0} out of range (0-{1})".format(
+            device_index, len(track.devices) - 1))
+    if new_index < 0 or new_index >= len(track.devices):
+        raise ValueError("New index {0} out of range (0-{1})".format(
+            new_index, len(track.devices) - 1))
+    device = track.devices[device_index]
+    device_name = device.name
+    song.move_device(device, track, new_index)
+    return {
+        "track_index": track_index,
+        "device_name": device_name,
+        "old_index": device_index,
+        "new_index": new_index,
+    }
+
+
+def enable_device(control_surface, params):
+    """Enable or disable a device on a track."""
+    song = control_surface.song()
+    track, device = _get_device(song, params)
+    enabled = params.get("enabled")
+    if enabled is None:
+        raise ValueError("Missing required parameter: enabled")
+    enabled = bool(enabled)
+    device_name = device.name
+    device.is_enabled = enabled
+    return {
+        "track_index": int(params["track_index"]),
+        "device_index": int(params["device_index"]),
+        "device_name": device_name,
+        "is_enabled": enabled,
+    }
+
+
 READ_HANDLERS = {
     "get_browser_tree": get_browser_tree,
     "get_browser_items_at_path": get_browser_items_at_path,
@@ -533,4 +626,8 @@ WRITE_HANDLERS = {
     "set_return_device_parameter": set_return_device_parameter,
     "set_drum_pad_mute": set_drum_pad_mute,
     "set_drum_pad_solo": set_drum_pad_solo,
+    "delete_master_device": delete_master_device,
+    "delete_return_device": delete_return_device,
+    "move_device": move_device,
+    "enable_device": enable_device,
 }

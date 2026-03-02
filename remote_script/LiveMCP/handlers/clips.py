@@ -537,9 +537,209 @@ def set_clip_warp_mode(control_surface, params):
     }
 
 
+def get_clip_envelope(control_surface, params):
+    """Read automation envelope value at a given time for a device parameter.
+
+    Requires an existing clip envelope for the parameter.
+    Returns None if no envelope exists for that parameter.
+    Note: Only works for Session clips (not Arrangement clips).
+    Note: The AutomationEnvelope API does not expose individual breakpoints —
+    only value_at_time() is available. Use time sampling to read the shape.
+    """
+    song = control_surface.song()
+    track, slot, clip = _get_track_and_clip(song, params)
+
+    if clip is None:
+        raise ValueError("No clip in track {0}, slot {1}".format(
+            params["track_index"], params["clip_index"]))
+
+    device_index = params.get("device_index")
+    param_index = params.get("param_index")
+    if device_index is None:
+        raise ValueError("Missing required parameter: device_index")
+    if param_index is None:
+        raise ValueError("Missing required parameter: param_index")
+
+    device_index = int(device_index)
+    param_index = int(param_index)
+
+    track_index = int(params["track_index"])
+
+    if device_index < 0 or device_index >= len(song.tracks[track_index].devices):
+        raise ValueError("Device index {0} out of range".format(device_index))
+
+    device = song.tracks[track_index].devices[device_index]
+    if param_index < 0 or param_index >= len(device.parameters):
+        raise ValueError("Parameter index {0} out of range".format(param_index))
+
+    param = device.parameters[param_index]
+    envelope = clip.automation_envelope(param)
+
+    if envelope is None:
+        return {
+            "track_index": track_index,
+            "clip_index": int(params["clip_index"]),
+            "device_index": device_index,
+            "param_index": param_index,
+            "param_name": param.name,
+            "envelope_exists": False,
+            "samples": [],
+        }
+
+    # Sample the envelope at intervals across the clip length
+    num_steps = int(params.get("num_steps", 16))
+    num_steps = max(2, min(num_steps, 128))
+    clip_length = clip.length
+    step_size = clip_length / num_steps
+
+    samples = []
+    for i in range(num_steps + 1):
+        t = i * step_size
+        if t > clip_length:
+            t = clip_length
+        samples.append({"time": t, "value": envelope.value_at_time(t)})
+
+    return {
+        "track_index": track_index,
+        "clip_index": int(params["clip_index"]),
+        "device_index": device_index,
+        "param_index": param_index,
+        "param_name": param.name,
+        "param_min": param.min,
+        "param_max": param.max,
+        "envelope_exists": True,
+        "clip_length": clip_length,
+        "num_steps": num_steps,
+        "samples": samples,
+    }
+
+
+def insert_clip_envelope_step(control_surface, params):
+    """Insert an automation step into a clip envelope for a device parameter.
+
+    Creates the envelope if it doesn't exist yet.
+    Only works for Session clips (Arrangement clips return None from automation_envelope).
+    """
+    song = control_surface.song()
+    track, slot, clip = _get_track_and_clip(song, params)
+
+    if clip is None:
+        raise ValueError("No clip in track {0}, slot {1}".format(
+            params["track_index"], params["clip_index"]))
+
+    device_index = params.get("device_index")
+    param_index = params.get("param_index")
+    time = params.get("time")
+    value = params.get("value")
+    curve = params.get("curve", 0.0)
+
+    if device_index is None:
+        raise ValueError("Missing required parameter: device_index")
+    if param_index is None:
+        raise ValueError("Missing required parameter: param_index")
+    if time is None:
+        raise ValueError("Missing required parameter: time")
+    if value is None:
+        raise ValueError("Missing required parameter: value")
+
+    device_index = int(device_index)
+    param_index = int(param_index)
+    time = float(time)
+    value = float(value)
+    curve = float(curve)
+
+    track_index = int(params["track_index"])
+
+    if device_index < 0 or device_index >= len(song.tracks[track_index].devices):
+        raise ValueError("Device index {0} out of range".format(device_index))
+
+    device = song.tracks[track_index].devices[device_index]
+    if param_index < 0 or param_index >= len(device.parameters):
+        raise ValueError("Parameter index {0} out of range".format(param_index))
+
+    param = device.parameters[param_index]
+    envelope = clip.automation_envelope(param)
+
+    if envelope is None:
+        raise ValueError(
+            "Cannot get/create automation envelope for parameter '{0}'. "
+            "This may be an Arrangement clip or a parameter from another track.".format(param.name)
+        )
+
+    envelope.insert_step(time, value, curve)
+    return {
+        "track_index": track_index,
+        "clip_index": int(params["clip_index"]),
+        "device_index": device_index,
+        "param_index": param_index,
+        "param_name": param.name,
+        "time": time,
+        "value": value,
+        "curve": curve,
+        "inserted": True,
+    }
+
+
+def clear_clip_envelope(control_surface, params):
+    """Clear automation envelope for a specific device parameter in a clip."""
+    song = control_surface.song()
+    track, slot, clip = _get_track_and_clip(song, params)
+
+    if clip is None:
+        raise ValueError("No clip in track {0}, slot {1}".format(
+            params["track_index"], params["clip_index"]))
+
+    device_index = params.get("device_index")
+    param_index = params.get("param_index")
+    if device_index is None:
+        raise ValueError("Missing required parameter: device_index")
+    if param_index is None:
+        raise ValueError("Missing required parameter: param_index")
+
+    device_index = int(device_index)
+    param_index = int(param_index)
+    track_index = int(params["track_index"])
+
+    if device_index < 0 or device_index >= len(song.tracks[track_index].devices):
+        raise ValueError("Device index {0} out of range".format(device_index))
+
+    device = song.tracks[track_index].devices[device_index]
+    if param_index < 0 or param_index >= len(device.parameters):
+        raise ValueError("Parameter index {0} out of range".format(param_index))
+
+    param = device.parameters[param_index]
+    clip.clear_envelope(param)
+    return {
+        "track_index": track_index,
+        "clip_index": int(params["clip_index"]),
+        "device_index": device_index,
+        "param_index": param_index,
+        "param_name": param.name,
+        "cleared": True,
+    }
+
+
+def clear_all_clip_envelopes(control_surface, params):
+    """Clear all automation envelopes in a clip."""
+    song = control_surface.song()
+    track, slot, clip = _get_track_and_clip(song, params)
+
+    if clip is None:
+        raise ValueError("No clip in track {0}, slot {1}".format(
+            params["track_index"], params["clip_index"]))
+
+    clip.clear_all_envelopes()
+    return {
+        "track_index": int(params["track_index"]),
+        "clip_index": int(params["clip_index"]),
+        "cleared": True,
+    }
+
+
 READ_HANDLERS = {
     "get_notes_from_clip": get_notes_from_clip,
     "get_scene_info": get_scene_info,
+    "get_clip_envelope": get_clip_envelope,
 }
 
 WRITE_HANDLERS = {
@@ -564,4 +764,7 @@ WRITE_HANDLERS = {
     "set_clip_pitch": set_clip_pitch,
     "set_clip_launch_mode": set_clip_launch_mode,
     "set_clip_warp_mode": set_clip_warp_mode,
+    "insert_clip_envelope_step": insert_clip_envelope_step,
+    "clear_clip_envelope": clear_clip_envelope,
+    "clear_all_clip_envelopes": clear_all_clip_envelopes,
 }

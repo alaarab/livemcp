@@ -71,20 +71,35 @@ def load_browser_item(control_surface, browser, track, item_uri):
     return {"loaded": True, "item_name": item.name, "track_name": track.name, "uri": item_uri}
 
 
+def _uri_variants(uri):
+    """Generate URI variants with different space/encoding forms."""
+    variants = [uri]
+    if " " in uri:
+        encoded = uri.replace(" ", "%20")
+        if encoded != uri:
+            variants.append(encoded)
+    if "%20" in uri:
+        decoded = uri.replace("%20", " ")
+        if decoded != uri and decoded not in variants:
+            variants.append(decoded)
+    return variants
+
+
 def find_item_by_uri(browser, uri, log, max_depth=15):
     """Strategy 1: Recursive search matching exact URI across all categories."""
     categories = [
         "instruments", "sounds", "drums", "audio_effects", "midi_effects",
         "user_library", "user_folders", "max_for_live",
     ]
-    for cat_name in categories:
-        if not hasattr(browser, cat_name):
-            continue
-        root = getattr(browser, cat_name)
-        result = _search_uri_recursive(root, uri, max_depth, 0)
-        if result:
-            log("LiveMCP: Found by URI in {0}: {1}".format(cat_name, result.name))
-            return result
+    for variant in _uri_variants(uri):
+        for cat_name in categories:
+            if not hasattr(browser, cat_name):
+                continue
+            root = getattr(browser, cat_name)
+            result = _search_uri_recursive(root, variant, max_depth, 0)
+            if result:
+                log("LiveMCP: Found by URI in {0}: {1}".format(cat_name, result.name))
+                return result
     return None
 
 
@@ -264,7 +279,7 @@ def get_items_at_path(browser, path, log):
 
 
 def extract_name_from_uri(uri):
-    """Extract a filename/item name from a URI string."""
+    """Extract a filename/item name from a URI string, URL-decoded."""
     # Handle URIs like 'query:UserLibrary#Presets:Audio%20Effects:...:Name.amxd'
     name = uri.split(":")[-1].split("/")[-1].replace("%20", " ")
     return name if name else None

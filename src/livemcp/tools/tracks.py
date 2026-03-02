@@ -247,6 +247,17 @@ def fold_track(track_index: int, fold: int) -> str:
     return json.dumps(result)
 
 
+def get_all_tracks_info() -> str:
+    """Get summary information for all tracks at once.
+
+    Returns a list of all tracks with name, type, color, mute, solo, arm,
+    is_foldable, is_grouped, device count, and clip count. Useful for getting
+    a full session overview without making separate calls per track.
+    """
+    result = get_connection().send_command("get_all_tracks_info", {})
+    return json.dumps(result)
+
+
 TOOLS = [
     get_track_info,
     create_midi_track,
@@ -268,4 +279,5 @@ TOOLS = [
     set_track_input_routing,
     set_track_output_routing,
     fold_track,
+    get_all_tracks_info,
 ]

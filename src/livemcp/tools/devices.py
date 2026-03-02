@@ -299,6 +299,64 @@ def set_drum_pad_solo(track_index: int, device_index: int, pad_index: int, solo:
     return json.dumps(result)
 
 
+def delete_master_device(device_index: int) -> str:
+    """Delete a device from the master track's device chain.
+
+    Args:
+        device_index: Zero-based index of the device to delete.
+    """
+    result = get_connection().send_command("delete_master_device", {
+        "device_index": device_index,
+    })
+    return json.dumps(result)
+
+
+def delete_return_device(return_index: int, device_index: int) -> str:
+    """Delete a device from a return track's device chain.
+
+    Args:
+        return_index: Zero-based index of the return track.
+        device_index: Zero-based index of the device to delete.
+    """
+    result = get_connection().send_command("delete_return_device", {
+        "return_index": return_index,
+        "device_index": device_index,
+    })
+    return json.dumps(result)
+
+
+def move_device(track_index: int, device_index: int, new_index: int) -> str:
+    """Move a device to a new position in a track's device chain.
+
+    Args:
+        track_index: Zero-based index of the track.
+        device_index: Zero-based index of the device to move.
+        new_index: Zero-based target position in the device chain.
+    """
+    result = get_connection().send_command("move_device", {
+        "track_index": track_index,
+        "device_index": device_index,
+        "new_index": new_index,
+    })
+    return json.dumps(result)
+
+
+def enable_device(track_index: int, device_index: int, enabled: bool) -> str:
+    """Enable or disable a device on a track.
+
+    Args:
+        track_index: Zero-based index of the track.
+        device_index: Zero-based index of the device.
+        enabled: True to enable the device, False to disable it.
+    """
+    result = get_connection().send_command("enable_device", {
+        "track_index": track_index,
+        "device_index": device_index,
+        "enabled": enabled,
+    })
+    return json.dumps(result)
+
+
 TOOLS = [
     get_browser_tree,
     get_browser_items_at_path,
@@ -319,4 +377,8 @@ TOOLS = [
     set_return_device_parameter,
     set_drum_pad_mute,
     set_drum_pad_solo,
+    delete_master_device,
+    delete_return_device,
+    move_device,
+    enable_device,
 ]

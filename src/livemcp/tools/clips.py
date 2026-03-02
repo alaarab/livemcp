@@ -404,6 +404,110 @@ def set_clip_warp_mode(track_index: int, clip_index: int, warp_mode: int) -> str
     return json.dumps(result)
 
 
+def get_clip_envelope(
+    track_index: int,
+    clip_index: int,
+    device_index: int,
+    param_index: int,
+    num_steps: int = 16,
+) -> str:
+    """Sample the automation envelope for a device parameter in a Session clip.
+
+    The Ableton API does not expose individual breakpoints, so this samples
+    the envelope value at evenly-spaced time positions across the clip.
+    Returns envelope_exists=False if no envelope is set for the parameter.
+    Only works for Session clips (not Arrangement clips).
+
+    Args:
+        track_index: Zero-based index of the track.
+        clip_index: Zero-based index of the clip slot.
+        device_index: Zero-based index of the device on the track.
+        param_index: Zero-based index of the parameter on the device.
+        num_steps: Number of sample points across the clip (2-128, default 16).
+    """
+    result = get_connection().send_command("get_clip_envelope", {
+        "track_index": track_index,
+        "clip_index": clip_index,
+        "device_index": device_index,
+        "param_index": param_index,
+        "num_steps": num_steps,
+    })
+    return json.dumps(result)
+
+
+def insert_clip_envelope_step(
+    track_index: int,
+    clip_index: int,
+    device_index: int,
+    param_index: int,
+    time: float,
+    value: float,
+    curve: float = 0.0,
+) -> str:
+    """Insert an automation breakpoint into a clip's parameter envelope.
+
+    Writes a single automation point at the given time with the given value.
+    Creates the envelope if it does not exist yet. Only works for Session clips.
+    Note: Arrangement clips will return an error.
+
+    Args:
+        track_index: Zero-based index of the track.
+        clip_index: Zero-based index of the clip slot.
+        device_index: Zero-based index of the device on the track.
+        param_index: Zero-based index of the parameter on the device.
+        time: Time position in beats to insert the automation point.
+        value: Automation value to set at the given time.
+        curve: Curve shape (0.0 = linear, default 0.0).
+    """
+    result = get_connection().send_command("insert_clip_envelope_step", {
+        "track_index": track_index,
+        "clip_index": clip_index,
+        "device_index": device_index,
+        "param_index": param_index,
+        "time": time,
+        "value": value,
+        "curve": curve,
+    })
+    return json.dumps(result)
+
+
+def clear_clip_envelope(
+    track_index: int,
+    clip_index: int,
+    device_index: int,
+    param_index: int,
+) -> str:
+    """Clear the automation envelope for a specific device parameter in a clip.
+
+    Args:
+        track_index: Zero-based index of the track.
+        clip_index: Zero-based index of the clip slot.
+        device_index: Zero-based index of the device on the track.
+        param_index: Zero-based index of the parameter on the device.
+    """
+    result = get_connection().send_command("clear_clip_envelope", {
+        "track_index": track_index,
+        "clip_index": clip_index,
+        "device_index": device_index,
+        "param_index": param_index,
+    })
+    return json.dumps(result)
+
+
+def clear_all_clip_envelopes(track_index: int, clip_index: int) -> str:
+    """Clear all automation envelopes in a clip.
+
+    Args:
+        track_index: Zero-based index of the track.
+        clip_index: Zero-based index of the clip slot.
+    """
+    result = get_connection().send_command("clear_all_clip_envelopes", {
+        "track_index": track_index,
+        "clip_index": clip_index,
+    })
+    return json.dumps(result)
+
+
 TOOLS = [
     create_clip,
     set_clip_name,
@@ -428,4 +532,8 @@ TOOLS = [
     set_clip_pitch,
     set_clip_launch_mode,
     set_clip_warp_mode,
+    get_clip_envelope,
+    insert_clip_envelope_step,
+    clear_clip_envelope,
+    clear_all_clip_envelopes,
 ]

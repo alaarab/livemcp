@@ -216,6 +216,56 @@ def set_clip_trigger_quantization(value: int) -> str:
     return json.dumps(result)
 
 
+def trigger_record() -> str:
+    """Trigger session record in Ableton Live."""
+    result = get_connection().send_command("trigger_record", {})
+    return json.dumps(result)
+
+
+def tap_tempo() -> str:
+    """Tap tempo to set the BPM by tapping."""
+    result = get_connection().send_command("tap_tempo", {})
+    return json.dumps(result)
+
+
+def get_selected_track() -> str:
+    """Get information about the currently selected track.
+
+    Returns the index, name, type, mute/solo/arm state, and color of the selected track.
+    """
+    result = get_connection().send_command("get_selected_track", {})
+    return json.dumps(result)
+
+
+def set_selected_track(track_index: int) -> str:
+    """Set the selected track in Ableton Live.
+
+    Args:
+        track_index: Zero-based index of the track to select.
+    """
+    result = get_connection().send_command("set_selected_track", {"track_index": track_index})
+    return json.dumps(result)
+
+
+def get_selected_scene() -> str:
+    """Get information about the currently selected scene.
+
+    Returns the index, name, and color of the selected scene.
+    """
+    result = get_connection().send_command("get_selected_scene", {})
+    return json.dumps(result)
+
+
+def set_selected_scene(scene_index: int) -> str:
+    """Set the selected scene in Ableton Live.
+
+    Args:
+        scene_index: Zero-based index of the scene to select.
+    """
+    result = get_connection().send_command("set_selected_scene", {"scene_index": scene_index})
+    return json.dumps(result)
+
+
 TOOLS = [
     get_session_info,
     get_song_time,
@@ -239,4 +289,10 @@ TOOLS = [
     jump_to_cue,
     set_midi_recording_quantization,
     set_clip_trigger_quantization,
+    trigger_record,
+    tap_tempo,
+    get_selected_track,
+    set_selected_track,
+    get_selected_scene,
+    set_selected_scene,
 ]

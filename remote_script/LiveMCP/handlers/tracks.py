@@ -465,11 +465,35 @@ def fold_track(control_surface, params):
     return {"track_index": track_index, "fold_state": int(fold)}
 
 
+def get_all_tracks_info(control_surface, params):
+    """Return summary info for all tracks at once."""
+    song = control_surface.song()
+    tracks = []
+    for i, track in enumerate(song.tracks):
+        clip_count = sum(1 for slot in track.clip_slots if slot.has_clip)
+        track_type = "midi" if track.has_midi_input else ("audio" if track.has_audio_input else "unknown")
+        tracks.append({
+            "index": i,
+            "name": track.name,
+            "type": track_type,
+            "color_index": track.color_index,
+            "mute": track.mute,
+            "solo": track.solo,
+            "arm": track.arm,
+            "is_foldable": track.is_foldable,
+            "is_grouped": track.is_grouped,
+            "device_count": len(track.devices),
+            "clip_count": clip_count,
+        })
+    return {"tracks": tracks, "track_count": len(tracks)}
+
+
 READ_HANDLERS = {
     "get_track_info": get_track_info,
     "get_return_tracks": get_return_tracks,
     "get_track_routing": get_track_routing,
     "get_group_info": get_group_info,
+    "get_all_tracks_info": get_all_tracks_info,
 }
 
 WRITE_HANDLERS = {

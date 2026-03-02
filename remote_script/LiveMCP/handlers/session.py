@@ -227,10 +227,93 @@ def set_clip_trigger_quantization(control_surface, params):
     return {"clip_trigger_quantization": int(value)}
 
 
+def trigger_record(control_surface, params):
+    """Trigger session record."""
+    control_surface.song().trigger_session_record()
+    return {"recording": True}
+
+
+def tap_tempo(control_surface, params):
+    """Tap tempo."""
+    control_surface.song().tap_tempo()
+    return {"tapped": True}
+
+
+def get_selected_track(control_surface, params):
+    """Return info about the currently selected track."""
+    song = control_surface.song()
+    track = song.view.selected_track
+    if track is None:
+        return {"selected_track": None}
+    tracks = list(song.tracks)
+    try:
+        index = tracks.index(track)
+        track_type = "midi" if track.has_midi_input else ("audio" if track.has_audio_input else "unknown")
+        return {
+            "index": index,
+            "name": track.name,
+            "type": track_type,
+            "mute": track.mute,
+            "solo": track.solo,
+            "arm": track.arm,
+            "color_index": track.color_index,
+        }
+    except ValueError:
+        return {"selected_track": "master_or_return"}
+
+
+def set_selected_track(control_surface, params):
+    """Set the selected track by index."""
+    track_index = params.get("track_index")
+    if track_index is None:
+        raise ValueError("Missing required parameter: track_index")
+    track_index = int(track_index)
+    song = control_surface.song()
+    if track_index < 0 or track_index >= len(song.tracks):
+        raise ValueError("Track index {0} out of range (0-{1})".format(
+            track_index, len(song.tracks) - 1))
+    song.view.selected_track = song.tracks[track_index]
+    return {"selected_track_index": track_index}
+
+
+def get_selected_scene(control_surface, params):
+    """Return info about the currently selected scene."""
+    song = control_surface.song()
+    scene = song.view.selected_scene
+    if scene is None:
+        return {"selected_scene": None}
+    scenes = list(song.scenes)
+    try:
+        index = scenes.index(scene)
+        return {
+            "index": index,
+            "name": scene.name,
+            "color_index": scene.color_index,
+        }
+    except ValueError:
+        return {"selected_scene": None}
+
+
+def set_selected_scene(control_surface, params):
+    """Set the selected scene by index."""
+    scene_index = params.get("scene_index")
+    if scene_index is None:
+        raise ValueError("Missing required parameter: scene_index")
+    scene_index = int(scene_index)
+    song = control_surface.song()
+    if scene_index < 0 or scene_index >= len(song.scenes):
+        raise ValueError("Scene index {0} out of range (0-{1})".format(
+            scene_index, len(song.scenes) - 1))
+    song.view.selected_scene = song.scenes[scene_index]
+    return {"selected_scene_index": scene_index}
+
+
 READ_HANDLERS = {
     "get_session_info": get_session_info,
     "get_song_time": get_song_time,
     "get_cue_points": get_cue_points,
+    "get_selected_track": get_selected_track,
+    "get_selected_scene": get_selected_scene,
 }
 
 WRITE_HANDLERS = {
@@ -253,4 +336,8 @@ WRITE_HANDLERS = {
     "jump_to_cue": jump_to_cue,
     "set_midi_recording_quantization": set_midi_recording_quantization,
     "set_clip_trigger_quantization": set_clip_trigger_quantization,
+    "trigger_record": trigger_record,
+    "tap_tempo": tap_tempo,
+    "set_selected_track": set_selected_track,
+    "set_selected_scene": set_selected_scene,
 }
