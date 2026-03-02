@@ -50,7 +50,9 @@ def set_track_volume(control_surface, params):
     """Set track volume (0.0 to 1.0)."""
     song = control_surface.song()
     track_index, track = _get_track(song, params)
-    value = params.get("volume") or params.get("value")
+    value = params.get("volume")
+    if value is None:
+        value = params.get("value")
     if value is None:
         raise ValueError("Missing required parameter: volume")
     value = float(value)
@@ -62,7 +64,9 @@ def set_track_pan(control_surface, params):
     """Set track panning (-1.0 to 1.0)."""
     song = control_surface.song()
     track_index, track = _get_track(song, params)
-    value = params.get("pan") or params.get("value")
+    value = params.get("pan")
+    if value is None:
+        value = params.get("value")
     if value is None:
         raise ValueError("Missing required parameter: pan")
     value = float(value)

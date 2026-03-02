@@ -383,7 +383,7 @@ def quantize_clip(control_surface, params):
     grid = params.get("grid")
     if grid is None:
         raise ValueError("Missing required parameter: grid")
-    grid = float(grid)
+    grid = int(grid)
     amount = float(params.get("amount", 1.0))
 
     clip.quantize(grid, amount)

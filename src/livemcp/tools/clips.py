@@ -269,14 +269,15 @@ def set_clip_color(track_index: int, clip_index: int, color_index: int) -> str:
 
 
 def quantize_clip(
-    track_index: int, clip_index: int, grid: float, amount: float = 1.0
+    track_index: int, clip_index: int, grid: int, amount: float = 1.0
 ) -> str:
     """Quantize notes in a clip to a grid.
 
     Args:
         track_index: Zero-based index of the track.
         clip_index: Zero-based index of the clip slot.
-        grid: Grid size in beats (0.25 = 16th notes, 0.5 = 8th, 1.0 = quarter).
+        grid: RecordingQuantization enum value (1=1/4, 2=1/8, 3=1/8T, 4=1/8+T,
+              5=1/16, 6=1/16T, 7=1/16+T, 8=1/32).
         amount: Quantize strength from 0.0 to 1.0 (default 1.0 = full quantize).
     """
     result = get_connection().send_command("quantize_clip", {
