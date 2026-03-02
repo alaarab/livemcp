@@ -1,7 +1,5 @@
 """Browser navigation and 3-strategy item loading for LiveMCP."""
 
-import traceback
-
 # All known browser root categories
 BROWSER_ROOTS = {
     "instruments": "instruments",
@@ -72,15 +70,13 @@ def load_browser_item(control_surface, browser, track, item_uri):
 
 
 def _uri_variants(uri):
-    """Generate URI variants with different space/encoding forms."""
+    """Generate URI variants with both space-encoded and space-decoded forms."""
     variants = [uri]
     if " " in uri:
-        encoded = uri.replace(" ", "%20")
-        if encoded != uri:
-            variants.append(encoded)
+        variants.append(uri.replace(" ", "%20"))
     if "%20" in uri:
         decoded = uri.replace("%20", " ")
-        if decoded != uri and decoded not in variants:
+        if decoded not in variants:
             variants.append(decoded)
     return variants
 
@@ -291,9 +287,8 @@ def _parse_uri_to_path(uri):
     if "#" in uri:
         after_hash = uri.split("#", 1)[1]
         parts = after_hash.replace("%20", " ").split(":")
-        # Map first segment to browser root
+        # Map first segment to a browser root attribute name
         root_map = {
-            "Presets": None,  # skip, use next segment
             "UserLibrary": "user_library",
             "M4L": "max_for_live",
         }

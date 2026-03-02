@@ -28,7 +28,11 @@ def _get_track_and_clip(song, params):
 
 
 def get_notes_from_clip(control_surface, params):
-    """Get all MIDI notes from a clip."""
+    """Get all MIDI notes from a clip.
+
+    Note: Prefer get_notes_extended, which also returns probability,
+    velocity_deviation, and release_velocity per note.
+    """
     song = control_surface.song()
     track, slot, clip = _get_track_and_clip(song, params)
 
@@ -111,7 +115,11 @@ def delete_clip(control_surface, params):
 
 
 def add_notes_to_clip(control_surface, params):
-    """Add MIDI notes to a clip using set_notes(tuple)."""
+    """Add MIDI notes to a clip using set_notes(tuple).
+
+    Note: Prefer add_notes_extended, which also supports probability,
+    velocity_deviation, and release_velocity per note.
+    """
     song = control_surface.song()
     track, slot, clip = _get_track_and_clip(song, params)
 
@@ -562,13 +570,12 @@ def get_clip_envelope(control_surface, params):
 
     device_index = int(device_index)
     param_index = int(param_index)
-
     track_index = int(params["track_index"])
 
-    if device_index < 0 or device_index >= len(song.tracks[track_index].devices):
+    if device_index < 0 or device_index >= len(track.devices):
         raise ValueError("Device index {0} out of range".format(device_index))
 
-    device = song.tracks[track_index].devices[device_index]
+    device = track.devices[device_index]
     if param_index < 0 or param_index >= len(device.parameters):
         raise ValueError("Parameter index {0} out of range".format(param_index))
 
@@ -647,13 +654,12 @@ def insert_clip_envelope_step(control_surface, params):
     time = float(time)
     value = float(value)
     curve = float(curve)
-
     track_index = int(params["track_index"])
 
-    if device_index < 0 or device_index >= len(song.tracks[track_index].devices):
+    if device_index < 0 or device_index >= len(track.devices):
         raise ValueError("Device index {0} out of range".format(device_index))
 
-    device = song.tracks[track_index].devices[device_index]
+    device = track.devices[device_index]
     if param_index < 0 or param_index >= len(device.parameters):
         raise ValueError("Parameter index {0} out of range".format(param_index))
 
@@ -700,10 +706,10 @@ def clear_clip_envelope(control_surface, params):
     param_index = int(param_index)
     track_index = int(params["track_index"])
 
-    if device_index < 0 or device_index >= len(song.tracks[track_index].devices):
+    if device_index < 0 or device_index >= len(track.devices):
         raise ValueError("Device index {0} out of range".format(device_index))
 
-    device = song.tracks[track_index].devices[device_index]
+    device = track.devices[device_index]
     if param_index < 0 or param_index >= len(device.parameters):
         raise ValueError("Parameter index {0} out of range".format(param_index))
 
@@ -841,12 +847,11 @@ def modify_notes(control_surface, params):
 def get_clip_properties(control_surface, params):
     """Get comprehensive properties of a clip."""
     song = control_surface.song()
-    track_index = int(params.get("track_index"))
-    clip_index = int(params.get("clip_index"))
-    track = song.tracks[track_index]
-    clip = track.clip_slots[clip_index].clip
+    track, slot, clip = _get_track_and_clip(song, params)
+    track_index = int(params["track_index"])
+    clip_index = int(params["clip_index"])
     if clip is None:
-        raise ValueError("No clip at track {0}, slot {1}".format(track_index, clip_index))
+        raise ValueError("No clip in track {0}, slot {1}".format(track_index, clip_index))
     result = {
         "track_index": track_index,
         "clip_index": clip_index,
@@ -884,15 +889,14 @@ def get_clip_properties(control_surface, params):
 def set_clip_ram_mode(control_surface, params):
     """Set RAM mode for an audio clip."""
     song = control_surface.song()
-    track_index = int(params.get("track_index"))
-    clip_index = int(params.get("clip_index"))
+    track, slot, clip = _get_track_and_clip(song, params)
+    track_index = int(params["track_index"])
+    clip_index = int(params["clip_index"])
     ram_mode = params.get("ram_mode")
     if ram_mode is None:
         raise ValueError("Missing required parameter: ram_mode")
-    track = song.tracks[track_index]
-    clip = track.clip_slots[clip_index].clip
     if clip is None:
-        raise ValueError("No clip")
+        raise ValueError("No clip in track {0}, slot {1}".format(track_index, clip_index))
     if not clip.is_audio_clip:
         raise ValueError("RAM mode only available for audio clips")
     clip.ram_mode = bool(ram_mode)
@@ -902,15 +906,14 @@ def set_clip_ram_mode(control_surface, params):
 def set_clip_velocity_amount(control_surface, params):
     """Set velocity-to-volume amount for a clip."""
     song = control_surface.song()
-    track_index = int(params.get("track_index"))
-    clip_index = int(params.get("clip_index"))
+    track, slot, clip = _get_track_and_clip(song, params)
+    track_index = int(params["track_index"])
+    clip_index = int(params["clip_index"])
     velocity_amount = params.get("velocity_amount")
     if velocity_amount is None:
         raise ValueError("Missing required parameter: velocity_amount")
-    track = song.tracks[track_index]
-    clip = track.clip_slots[clip_index].clip
     if clip is None:
-        raise ValueError("No clip")
+        raise ValueError("No clip in track {0}, slot {1}".format(track_index, clip_index))
     clip.velocity_amount = float(velocity_amount)
     return {"track_index": track_index, "clip_index": clip_index, "velocity_amount": clip.velocity_amount}
 

@@ -273,6 +273,83 @@ def get_all_tracks_info() -> str:
     return json.dumps(result)
 
 
+def get_track_output_meter(track_index: int) -> str:
+    """Get the output meter levels for a track.
+
+    Returns the current output meter level, left channel, and right channel values.
+
+    Args:
+        track_index: Zero-based index of the track.
+    """
+    result = get_connection().send_command("get_track_output_meter", {
+        "track_index": track_index,
+    })
+    return json.dumps(result)
+
+
+def get_clip_slot_status(track_index: int, clip_index: int) -> str:
+    """Get detailed status of a specific clip slot.
+
+    Returns playing, recording, and trigger state, color info, and clip
+    details (name, length, color) if a clip is present.
+
+    Args:
+        track_index: Zero-based index of the track.
+        clip_index: Zero-based index of the clip slot.
+    """
+    result = get_connection().send_command("get_clip_slot_status", {
+        "track_index": track_index,
+        "clip_index": clip_index,
+    })
+    return json.dumps(result)
+
+
+def get_return_track_sends(return_index: int) -> str:
+    """Get the send values for a return track.
+
+    Returns the list of sends on a return track with their names and values.
+
+    Args:
+        return_index: Zero-based index of the return track.
+    """
+    result = get_connection().send_command("get_return_track_sends", {
+        "return_index": return_index,
+    })
+    return json.dumps(result)
+
+
+def set_clip_slot_color(track_index: int, clip_index: int, color: int) -> str:
+    """Set the color of a clip slot.
+
+    Args:
+        track_index: Zero-based index of the track.
+        clip_index: Zero-based index of the clip slot.
+        color: Color value (raw integer color, not color index).
+    """
+    result = get_connection().send_command("set_clip_slot_color", {
+        "track_index": track_index,
+        "clip_index": clip_index,
+        "color": color,
+    })
+    return json.dumps(result)
+
+
+def set_return_track_send(return_index: int, send_index: int, value: float) -> str:
+    """Set a send value on a return track.
+
+    Args:
+        return_index: Zero-based index of the return track.
+        send_index: Zero-based index of the send on the return track.
+        value: Send value (0.0 to 1.0).
+    """
+    result = get_connection().send_command("set_return_track_send", {
+        "return_index": return_index,
+        "send_index": send_index,
+        "value": value,
+    })
+    return json.dumps(result)
+
+
 TOOLS = [
     get_track_info,
     create_midi_track,
@@ -296,4 +373,9 @@ TOOLS = [
     fold_track,
     get_track_freeze_status,
     get_all_tracks_info,
+    get_track_output_meter,
+    get_clip_slot_status,
+    get_return_track_sends,
+    set_clip_slot_color,
+    set_return_track_send,
 ]

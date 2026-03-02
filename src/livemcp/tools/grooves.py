@@ -64,6 +64,11 @@ def set_clip_groove(track_index: int, clip_index: int, groove_index: int) -> str
 def remove_clip_groove(track_index: int, clip_index: int) -> str:
     """Remove the groove assignment from a clip.
 
+    Note: This tool has a known API limitation — Ableton's API does not support
+    removing groove assignments from clips. Consider setting groove properties
+    to 0 instead (use set_groove_property to set quantization_amount,
+    timing_amount, random_amount, and velocity_amount all to 0.0).
+
     Args:
         track_index: Zero-based index of the track containing the clip.
         clip_index: Zero-based index of the clip slot containing the clip.

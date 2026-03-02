@@ -147,6 +147,41 @@ def set_crossfade_assign(track_index: int, assignment: int) -> str:
     return json.dumps(result)
 
 
+def get_master_output_meter() -> str:
+    """Get the current output meter levels for the master track.
+
+    Returns output_meter_level (peak), output_meter_left, and output_meter_right.
+    Values are in the range 0.0 to 1.0.
+    """
+    result = get_connection().send_command("get_master_output_meter", {})
+    return json.dumps(result)
+
+
+def get_return_track_output_meter(return_index: int) -> str:
+    """Get the current output meter levels for a return track.
+
+    Args:
+        return_index: Zero-based index of the return track.
+
+    Returns return_index, name, output_meter_level, output_meter_left, and output_meter_right.
+    Values are in the range 0.0 to 1.0.
+    """
+    result = get_connection().send_command("get_return_track_output_meter", {
+        "return_index": return_index,
+    })
+    return json.dumps(result)
+
+
+def get_all_track_meters() -> str:
+    """Get output meter levels for all tracks and the master track.
+
+    Returns a dict with 'tracks' (list of per-track meter data) and 'master' meter data.
+    Each entry includes output_meter_level, output_meter_left, and output_meter_right (0.0-1.0).
+    """
+    result = get_connection().send_command("get_all_track_meters", {})
+    return json.dumps(result)
+
+
 TOOLS = [
     set_track_volume,
     set_track_pan,
@@ -159,4 +194,7 @@ TOOLS = [
     set_master_volume,
     set_master_pan,
     set_crossfade_assign,
+    get_master_output_meter,
+    get_return_track_output_meter,
+    get_all_track_meters,
 ]

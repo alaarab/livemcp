@@ -172,11 +172,11 @@ def set_scale(control_surface, params):
         result = {}
         try:
             result["root_note"] = song.root_note
-        except Exception as e:
+        except Exception:
             pass
         try:
             result["scale_name"] = song.scale_name
-        except Exception as e:
+        except Exception:
             pass
         return result
     except Exception as e:
@@ -338,8 +338,17 @@ def get_scene_properties(control_surface, params):
 def set_scene_tempo(control_surface, params):
     """Set the tempo for a scene. Use 0 to clear scene tempo."""
     song = control_surface.song()
-    scene_index = int(params.get("scene_index"))
-    tempo = float(params.get("tempo"))
+    scene_index = params.get("scene_index")
+    tempo = params.get("tempo")
+    if scene_index is None:
+        raise ValueError("Missing required parameter: scene_index")
+    if tempo is None:
+        raise ValueError("Missing required parameter: tempo")
+    scene_index = int(scene_index)
+    tempo = float(tempo)
+    if scene_index < 0 or scene_index >= len(song.scenes):
+        raise ValueError("Scene index {0} out of range (0-{1})".format(
+            scene_index, len(song.scenes) - 1))
     scene = song.scenes[scene_index]
     if tempo <= 0:
         try:
@@ -358,13 +367,118 @@ def set_scene_tempo(control_surface, params):
 def set_scene_time_signature(control_surface, params):
     """Set time signature for a scene (Live 12+)."""
     song = control_surface.song()
-    scene_index = int(params.get("scene_index"))
-    numerator = int(params.get("numerator"))
-    denominator = int(params.get("denominator"))
+    scene_index = params.get("scene_index")
+    numerator = params.get("numerator")
+    denominator = params.get("denominator")
+    if scene_index is None:
+        raise ValueError("Missing required parameter: scene_index")
+    if numerator is None:
+        raise ValueError("Missing required parameter: numerator")
+    if denominator is None:
+        raise ValueError("Missing required parameter: denominator")
+    scene_index = int(scene_index)
+    numerator = int(numerator)
+    denominator = int(denominator)
+    if scene_index < 0 or scene_index >= len(song.scenes):
+        raise ValueError("Scene index {0} out of range (0-{1})".format(
+            scene_index, len(song.scenes) - 1))
     scene = song.scenes[scene_index]
     scene.time_signature_numerator = numerator
     scene.time_signature_denominator = denominator
     return {"scene_index": scene_index, "numerator": numerator, "denominator": denominator}
+
+
+def get_application_info(control_surface, params):
+    """Return Ableton Live version info."""
+    app = control_surface.application()
+    return {
+        "major_version": app.get_major_version(),
+        "minor_version": app.get_minor_version(),
+        "bugfix_version": app.get_bugfix_version(),
+    }
+
+
+def get_record_mode(control_surface, params):
+    """Return whether arrangement recording is armed."""
+    song = control_surface.song()
+    return {"record_mode": song.record_mode}
+
+
+def set_record_mode(control_surface, params):
+    """Enable or disable arrangement recording."""
+    enabled = params.get("enabled")
+    if enabled is None:
+        raise ValueError("Missing required parameter: enabled")
+    song = control_surface.song()
+    song.record_mode = bool(enabled)
+    return {"record_mode": song.record_mode}
+
+
+def capture_and_insert_scene(control_surface, params):
+    """Capture currently playing clips into a new scene."""
+    song = control_surface.song()
+    song.capture_and_insert_scene()
+    return {"captured": True, "scene_count": len(song.scenes)}
+
+
+def create_locator(control_surface, params):
+    """Create a cue point (locator) at the current playhead position.
+
+    IMPORTANT: Ableton's set_or_delete_cue() operates at the playhead position
+    from the *previous* tick. You MUST call set_song_time first to position the
+    playhead, then call create_locator in a separate command.
+    """
+    song = control_surface.song()
+    before_count = len(song.cue_points)
+    song.set_or_delete_cue()
+    after_count = len(song.cue_points)
+    created = after_count > before_count
+
+    if not created:
+        # Toggle deleted an existing cue at this position; call again to re-create
+        song.set_or_delete_cue()
+        after_count = len(song.cue_points)
+        created = after_count > before_count
+
+    return {"created": created, "playhead_time": song.current_song_time}
+
+
+def delete_locator(control_surface, params):
+    """Delete a cue point (locator) by index.
+
+    IMPORTANT: Ableton's set_or_delete_cue() operates at the playhead position
+    from the *previous* tick. This handler moves the playhead to the cue point's
+    time; a second call will then toggle at that position. For reliable deletion,
+    call set_song_time to the cue's time first, then call delete_locator.
+    """
+    song = control_surface.song()
+    cue_index = params.get("index")
+    if cue_index is None:
+        raise ValueError("Missing required parameter: index")
+    cue_index = int(cue_index)
+    cue_points = list(song.cue_points)
+    if cue_index < 0 or cue_index >= len(cue_points):
+        raise ValueError("Cue index {} out of range (0-{})".format(cue_index, len(cue_points) - 1))
+
+    cue = cue_points[cue_index]
+    target_time = cue.time
+
+    # Move playhead to the cue's time for the *next* toggle call
+    song.current_song_time = target_time
+
+    # Toggle — this operates at the *previous* playhead position, not target_time
+    before_count = len(cue_points)
+    song.set_or_delete_cue()
+    after_count = len(song.cue_points)
+
+    # Check if the intended cue was actually deleted
+    still_exists = any(abs(cp.time - target_time) < 0.001 for cp in song.cue_points)
+    if still_exists and after_count >= before_count:
+        return {"deleted": False, "time": target_time,
+                "message": "Playhead positioned at cue time. Call delete_locator again "
+                           "to delete now that playhead is at the correct position."}
+
+    return {"deleted": True, "time": target_time}
 
 
 READ_HANDLERS = {
@@ -374,6 +488,8 @@ READ_HANDLERS = {
     "get_selected_track": get_selected_track,
     "get_selected_scene": get_selected_scene,
     "get_scene_properties": get_scene_properties,
+    "get_application_info": get_application_info,
+    "get_record_mode": get_record_mode,
 }
 
 WRITE_HANDLERS = {
@@ -402,4 +518,8 @@ WRITE_HANDLERS = {
     "set_selected_scene": set_selected_scene,
     "set_scene_tempo": set_scene_tempo,
     "set_scene_time_signature": set_scene_time_signature,
+    "set_record_mode": set_record_mode,
+    "capture_and_insert_scene": capture_and_insert_scene,
+    "create_locator": create_locator,
+    "delete_locator": delete_locator,
 }

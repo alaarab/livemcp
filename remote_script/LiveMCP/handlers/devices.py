@@ -31,7 +31,7 @@ def _get_device(song, params):
 
 
 def get_browser_tree(control_surface, params):
-    """Get hierarchical browser tree."""
+    """Get hierarchical browser tree. category_type: 'all', 'instruments', 'sounds', 'drums', 'audio_effects', 'midi_effects'."""
     browser = control_surface.application().browser
     category_type = params.get("category_type", "all")
     return _get_browser_tree(browser, category_type)
@@ -73,7 +73,7 @@ def get_device_parameters(control_surface, params):
 
 
 def load_browser_item(control_surface, params):
-    """Load a browser item onto a track."""
+    """Load a browser item onto a track by URI (supports 'uri' or 'item_uri' param key)."""
     track_index = params.get("track_index")
     uri = params.get("uri") or params.get("item_uri")
     if track_index is None:
@@ -93,7 +93,7 @@ def load_browser_item(control_surface, params):
 
 
 def load_drum_kit(control_surface, params):
-    """Load a drum rack and then load a drum kit into it."""
+    """Load a drum rack by rack_uri, then load a kit preset by kit_path using the same 3-strategy fallback."""
     track_index = params.get("track_index")
     rack_uri = params.get("rack_uri")
     kit_path = params.get("kit_path")
@@ -116,11 +116,8 @@ def load_drum_kit(control_surface, params):
     # Load the drum rack first
     _load_browser_item(control_surface, browser, track, rack_uri)
 
-    # Then load the kit via path navigation
-    log = control_surface.log_message
-    result = _get_items_at_path(browser, kit_path, log)
-    if "error" in result:
-        raise ValueError("Kit path error: {0}".format(result["error"]))
+    # Then load the kit preset using the same 3-strategy fallback
+    _load_browser_item(control_surface, browser, track, kit_path)
 
     return {
         "track_index": track_index,
@@ -325,22 +322,10 @@ def get_drum_pads(control_surface, params):
 def delete_device(control_surface, params):
     """Delete a device from a track."""
     song = control_surface.song()
-    track_index = params.get("track_index")
-    device_index = params.get("device_index")
-    if track_index is None:
-        raise ValueError("Missing required parameter: track_index")
-    if device_index is None:
-        raise ValueError("Missing required parameter: device_index")
-    track_index = int(track_index)
-    device_index = int(device_index)
-    if track_index < 0 or track_index >= len(song.tracks):
-        raise ValueError("Track index {0} out of range (0-{1})".format(
-            track_index, len(song.tracks) - 1))
-    track = song.tracks[track_index]
-    if device_index < 0 or device_index >= len(track.devices):
-        raise ValueError("Device index {0} out of range (0-{1})".format(
-            device_index, len(track.devices) - 1))
-    device_name = track.devices[device_index].name
+    track, device = _get_device(song, params)
+    track_index = int(params["track_index"])
+    device_index = int(params["device_index"])
+    device_name = device.name
     track.delete_device(device_index)
     return {"track_index": track_index, "device_index": device_index, "deleted_device": device_name}
 
@@ -552,29 +537,16 @@ def delete_return_device(control_surface, params):
 def move_device(control_surface, params):
     """Move a device to a new position in a track's device chain."""
     song = control_surface.song()
-    track_index = params.get("track_index")
-    device_index = params.get("device_index")
+    track, device = _get_device(song, params)
+    track_index = int(params["track_index"])
+    device_index = int(params["device_index"])
     new_index = params.get("new_index")
-    if track_index is None:
-        raise ValueError("Missing required parameter: track_index")
-    if device_index is None:
-        raise ValueError("Missing required parameter: device_index")
     if new_index is None:
         raise ValueError("Missing required parameter: new_index")
-    track_index = int(track_index)
-    device_index = int(device_index)
     new_index = int(new_index)
-    if track_index < 0 or track_index >= len(song.tracks):
-        raise ValueError("Track index {0} out of range (0-{1})".format(
-            track_index, len(song.tracks) - 1))
-    track = song.tracks[track_index]
-    if device_index < 0 or device_index >= len(track.devices):
-        raise ValueError("Device index {0} out of range (0-{1})".format(
-            device_index, len(track.devices) - 1))
     if new_index < 0 or new_index >= len(track.devices):
         raise ValueError("New index {0} out of range (0-{1})".format(
             new_index, len(track.devices) - 1))
-    device = track.devices[device_index]
     device_name = device.name
     song.move_device(device, track, new_index)
     return {

@@ -57,6 +57,9 @@ def add_notes_to_clip(track_index: int, clip_index: int, notes: list) -> str:
     Each note is a dict with: pitch (0-127 MIDI note number), start_time (beat position),
     duration (in beats), velocity (0-127), and mute (boolean).
 
+    Prefer add_notes_extended when you need probability, velocity_deviation, or
+    release_velocity per note.
+
     Args:
         track_index: Zero-based index of the track.
         clip_index: Zero-based index of the clip slot.
@@ -74,6 +77,9 @@ def get_notes_from_clip(track_index: int, clip_index: int) -> str:
     """Read all MIDI notes from a clip.
 
     Returns a list of notes with pitch, start_time, duration, velocity, and mute.
+
+    Prefer get_notes_extended when you need probability, velocity_deviation, or
+    release_velocity per note.
 
     Args:
         track_index: Zero-based index of the track.

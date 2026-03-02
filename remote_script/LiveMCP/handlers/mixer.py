@@ -52,8 +52,6 @@ def set_track_volume(control_surface, params):
     track_index, track = _get_track(song, params)
     value = params.get("volume")
     if value is None:
-        value = params.get("value")
-    if value is None:
         raise ValueError("Missing required parameter: volume")
     value = float(value)
     track.mixer_device.volume.value = value
@@ -65,8 +63,6 @@ def set_track_pan(control_surface, params):
     song = control_surface.song()
     track_index, track = _get_track(song, params)
     value = params.get("pan")
-    if value is None:
-        value = params.get("value")
     if value is None:
         raise ValueError("Missing required parameter: pan")
     value = float(value)
@@ -186,9 +182,64 @@ def set_crossfade_assign(control_surface, params):
     return {"track_index": track_index, "crossfade_assign": assignment}
 
 
+def get_master_output_meter(control_surface, params):
+    """Get output meter levels for the master track."""
+    master = control_surface.song().master_track
+    return {
+        "output_meter_level": master.output_meter_level,
+        "output_meter_left": master.output_meter_left,
+        "output_meter_right": master.output_meter_right,
+    }
+
+
+def get_return_track_output_meter(control_surface, params):
+    """Get output meter levels for a return track by index."""
+    song = control_surface.song()
+    return_index = int(params.get("return_index"))
+    returns = song.return_tracks
+    if return_index < 0 or return_index >= len(returns):
+        raise ValueError("Return track index out of range")
+    track = returns[return_index]
+    return {
+        "return_index": return_index,
+        "name": track.name,
+        "output_meter_level": track.output_meter_level,
+        "output_meter_left": track.output_meter_left,
+        "output_meter_right": track.output_meter_right,
+    }
+
+
+def get_all_track_meters(control_surface, params):
+    """Get output meter levels for all tracks and the master."""
+    song = control_surface.song()
+    tracks = []
+    for i, track in enumerate(song.tracks):
+        entry = {
+            "index": i,
+            "name": track.name,
+            "output_meter_level": track.output_meter_level,
+        }
+        if track.has_audio_output:
+            entry["output_meter_left"] = track.output_meter_left
+            entry["output_meter_right"] = track.output_meter_right
+        tracks.append(entry)
+    master = song.master_track
+    return {
+        "tracks": tracks,
+        "master": {
+            "output_meter_level": master.output_meter_level,
+            "output_meter_left": master.output_meter_left,
+            "output_meter_right": master.output_meter_right,
+        }
+    }
+
+
 READ_HANDLERS = {
     "get_mixer_state": get_mixer_state,
     "get_master_mixer_state": get_master_mixer_state,
+    "get_master_output_meter": get_master_output_meter,
+    "get_return_track_output_meter": get_return_track_output_meter,
+    "get_all_track_meters": get_all_track_meters,
 }
 
 WRITE_HANDLERS = {

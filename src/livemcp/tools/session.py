@@ -311,6 +311,69 @@ def set_scene_time_signature(scene_index: int, numerator: int, denominator: int)
     return json.dumps(result)
 
 
+def get_application_info() -> str:
+    """Get Ableton Live application version info.
+
+    Returns major_version, minor_version, and bugfix_version.
+    """
+    result = get_connection().send_command("get_application_info", {})
+    return json.dumps(result)
+
+
+def get_record_mode() -> str:
+    """Get whether arrangement recording is armed.
+
+    Returns record_mode (True if armed, False otherwise).
+    """
+    result = get_connection().send_command("get_record_mode", {})
+    return json.dumps(result)
+
+
+def set_record_mode(enabled: bool) -> str:
+    """Enable or disable arrangement recording.
+
+    Args:
+        enabled: True to arm recording, False to disarm.
+    """
+    result = get_connection().send_command("set_record_mode", {"enabled": enabled})
+    return json.dumps(result)
+
+
+def capture_and_insert_scene() -> str:
+    """Capture currently playing clips into a new scene.
+
+    Creates a new scene containing all currently playing session clips.
+    """
+    result = get_connection().send_command("capture_and_insert_scene", {})
+    return json.dumps(result)
+
+
+def create_locator() -> str:
+    """Create a cue point (locator) at the current playhead position.
+
+    IMPORTANT: You must call set_song_time first to position the playhead
+    at the desired location, then call create_locator. The locator is
+    always created at the playhead position, not at an arbitrary time.
+    """
+    result = get_connection().send_command("create_locator", {})
+    return json.dumps(result)
+
+
+def delete_locator(index: int) -> str:
+    """Delete a cue point (locator) by index.
+
+    Due to Ableton API limitations, deletion may require two calls:
+    1. First call positions the playhead at the cue point's time.
+    2. Second call actually deletes the cue point.
+    Check the 'deleted' field in the response.
+
+    Args:
+        index: Zero-based index of the cue point to delete.
+    """
+    result = get_connection().send_command("delete_locator", {"index": index})
+    return json.dumps(result)
+
+
 TOOLS = [
     get_session_info,
     get_song_time,
@@ -343,4 +406,10 @@ TOOLS = [
     get_scene_properties,
     set_scene_tempo,
     set_scene_time_signature,
+    get_application_info,
+    get_record_mode,
+    set_record_mode,
+    capture_and_insert_scene,
+    create_locator,
+    delete_locator,
 ]

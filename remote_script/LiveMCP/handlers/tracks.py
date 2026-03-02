@@ -508,6 +508,134 @@ def get_track_freeze_status(control_surface, params):
     }
 
 
+def get_track_output_meter(control_surface, params):
+    """Get the output meter levels for a track."""
+    song = control_surface.song()
+    track_index = params.get("track_index")
+    if track_index is None:
+        raise ValueError("Missing required parameter: track_index")
+    track_index = int(track_index)
+    if track_index < 0 or track_index >= len(song.tracks):
+        raise ValueError("Track index {0} out of range (0-{1})".format(
+            track_index, len(song.tracks) - 1))
+    track = song.tracks[track_index]
+    result = {
+        "track_index": track_index,
+        "output_meter_level": track.output_meter_level,
+    }
+    if track.has_audio_output:
+        result["output_meter_left"] = track.output_meter_left
+        result["output_meter_right"] = track.output_meter_right
+    return result
+
+
+def get_clip_slot_status(control_surface, params):
+    """Get detailed status of a specific clip slot."""
+    song = control_surface.song()
+    track_index = params.get("track_index")
+    clip_index = params.get("clip_index")
+    if track_index is None:
+        raise ValueError("Missing required parameter: track_index")
+    if clip_index is None:
+        raise ValueError("Missing required parameter: clip_index")
+    track_index = int(track_index)
+    clip_index = int(clip_index)
+    if track_index < 0 or track_index >= len(song.tracks):
+        raise ValueError("Track index {0} out of range (0-{1})".format(
+            track_index, len(song.tracks) - 1))
+    track = song.tracks[track_index]
+    if clip_index < 0 or clip_index >= len(track.clip_slots):
+        raise ValueError("Clip slot index {0} out of range (0-{1})".format(
+            clip_index, len(track.clip_slots) - 1))
+    slot = track.clip_slots[clip_index]
+    result = {
+        "track_index": track_index,
+        "clip_index": clip_index,
+        "has_clip": slot.has_clip,
+        "is_playing": slot.is_playing,
+        "is_recording": slot.is_recording,
+        "is_triggered": slot.is_triggered,
+        "color": slot.color,
+        "color_index": slot.color_index,
+    }
+    if slot.has_clip:
+        clip = slot.clip
+        result["clip_name"] = clip.name
+        result["clip_length"] = clip.length
+        result["clip_color"] = clip.color
+    return result
+
+
+def get_return_track_sends(control_surface, params):
+    """Get the send values for a return track."""
+    song = control_surface.song()
+    return_index = params.get("return_index")
+    if return_index is None:
+        raise ValueError("Missing required parameter: return_index")
+    return_index = int(return_index)
+    returns = song.return_tracks
+    if return_index < 0 or return_index >= len(returns):
+        raise ValueError("Return track index out of range")
+    track = returns[return_index]
+    sends = []
+    for i, send in enumerate(track.mixer_device.sends):
+        sends.append({"index": i, "name": send.name, "value": send.value})
+    return {"return_index": return_index, "name": track.name, "sends": sends}
+
+
+def set_clip_slot_color(control_surface, params):
+    """Set the color of a clip slot."""
+    song = control_surface.song()
+    track_index = params.get("track_index")
+    clip_index = params.get("clip_index")
+    color = params.get("color")
+    if track_index is None:
+        raise ValueError("Missing required parameter: track_index")
+    if clip_index is None:
+        raise ValueError("Missing required parameter: clip_index")
+    if color is None:
+        raise ValueError("Missing required parameter: color")
+    track_index = int(track_index)
+    clip_index = int(clip_index)
+    color = int(color)
+    if track_index < 0 or track_index >= len(song.tracks):
+        raise ValueError("Track index {0} out of range (0-{1})".format(
+            track_index, len(song.tracks) - 1))
+    track = song.tracks[track_index]
+    if clip_index < 0 or clip_index >= len(track.clip_slots):
+        raise ValueError("Clip slot index {0} out of range (0-{1})".format(
+            clip_index, len(track.clip_slots) - 1))
+    track.clip_slots[clip_index].color = color
+    return {"track_index": track_index, "clip_index": clip_index, "color": color}
+
+
+def set_return_track_send(control_surface, params):
+    """Set a send value on a return track."""
+    song = control_surface.song()
+    return_index = params.get("return_index")
+    send_index = params.get("send_index")
+    value = params.get("value")
+    if return_index is None:
+        raise ValueError("Missing required parameter: return_index")
+    if send_index is None:
+        raise ValueError("Missing required parameter: send_index")
+    if value is None:
+        raise ValueError("Missing required parameter: value")
+    return_index = int(return_index)
+    send_index = int(send_index)
+    value = float(value)
+    returns = song.return_tracks
+    if return_index < 0 or return_index >= len(returns):
+        raise ValueError("Return track index {0} out of range (0-{1})".format(
+            return_index, len(returns) - 1))
+    sends = returns[return_index].mixer_device.sends
+    if send_index < 0 or send_index >= len(sends):
+        raise ValueError("Send index {0} out of range (0-{1})".format(
+            send_index, len(sends) - 1))
+    sends[send_index].value = value
+    return {"return_index": return_index, "send_index": send_index, "value": value}
+
+
 READ_HANDLERS = {
     "get_track_info": get_track_info,
     "get_return_tracks": get_return_tracks,
@@ -515,6 +643,9 @@ READ_HANDLERS = {
     "get_group_info": get_group_info,
     "get_all_tracks_info": get_all_tracks_info,
     "get_track_freeze_status": get_track_freeze_status,
+    "get_track_output_meter": get_track_output_meter,
+    "get_clip_slot_status": get_clip_slot_status,
+    "get_return_track_sends": get_return_track_sends,
 }
 
 WRITE_HANDLERS = {
@@ -534,4 +665,6 @@ WRITE_HANDLERS = {
     "set_track_input_routing": set_track_input_routing,
     "set_track_output_routing": set_track_output_routing,
     "fold_track": fold_track,
+    "set_clip_slot_color": set_clip_slot_color,
+    "set_return_track_send": set_return_track_send,
 }

@@ -18,7 +18,6 @@ class LiveMCPServer:
 
     def __init__(self, control_surface):
         self._cs = control_surface
-        self._song = control_surface._song
         self._server_socket = None
         self._server_thread = None
         self._client_threads = []
