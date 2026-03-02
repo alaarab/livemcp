@@ -481,6 +481,231 @@ def delete_locator(control_surface, params):
     return {"deleted": True, "time": target_time}
 
 
+def get_view_state(control_surface, params):
+    """Return current view state: selected track, detail clip, draw mode, follow song."""
+    song = control_surface.song()
+    view = song.view
+    selected_track = view.selected_track
+    tracks = list(song.tracks)
+    track_info = None
+    try:
+        idx = tracks.index(selected_track)
+        track_info = {"index": idx, "name": selected_track.name}
+    except ValueError:
+        track_info = {"index": None, "name": selected_track.name if selected_track else None}
+    detail_clip = view.detail_clip
+    clip_info = None
+    if detail_clip is not None:
+        clip_info = {"name": detail_clip.name, "length": detail_clip.length}
+    return {
+        "selected_track": track_info,
+        "detail_clip": clip_info,
+        "draw_mode": view.draw_mode,
+        "follow_song": view.follow_song,
+    }
+
+
+def set_follow_song(control_surface, params):
+    """Enable or disable follow song mode."""
+    enabled = params.get("enabled")
+    if enabled is None:
+        raise ValueError("Missing required parameter: enabled")
+    control_surface.song().view.follow_song = bool(enabled)
+    return {"follow_song": control_surface.song().view.follow_song}
+
+
+def set_draw_mode(control_surface, params):
+    """Enable or disable draw mode."""
+    enabled = params.get("enabled")
+    if enabled is None:
+        raise ValueError("Missing required parameter: enabled")
+    control_surface.song().view.draw_mode = bool(enabled)
+    return {"draw_mode": control_surface.song().view.draw_mode}
+
+
+def select_clip_in_detail(control_surface, params):
+    """Select a clip in the detail view."""
+    track_index = params.get("track_index")
+    clip_index = params.get("clip_index")
+    if track_index is None:
+        raise ValueError("Missing required parameter: track_index")
+    if clip_index is None:
+        raise ValueError("Missing required parameter: clip_index")
+    track_index = int(track_index)
+    clip_index = int(clip_index)
+    song = control_surface.song()
+    if track_index < 0 or track_index >= len(song.tracks):
+        raise ValueError("Track index {0} out of range (0-{1})".format(
+            track_index, len(song.tracks) - 1))
+    track = song.tracks[track_index]
+    if clip_index < 0 or clip_index >= len(track.clip_slots):
+        raise ValueError("Clip index {0} out of range (0-{1})".format(
+            clip_index, len(track.clip_slots) - 1))
+    clip_slot = track.clip_slots[clip_index]
+    if not clip_slot.has_clip:
+        raise ValueError("No clip at track {0}, slot {1}".format(track_index, clip_index))
+    song.view.detail_clip = clip_slot.clip
+    return {"track_index": track_index, "clip_index": clip_index, "clip_name": clip_slot.clip.name}
+
+
+def get_punch_state(control_surface, params):
+    """Return punch in/out state."""
+    song = control_surface.song()
+    return {"punch_in": song.punch_in, "punch_out": song.punch_out}
+
+
+def set_punch_in(control_surface, params):
+    """Enable or disable punch in."""
+    enabled = params.get("enabled")
+    if enabled is None:
+        raise ValueError("Missing required parameter: enabled")
+    value = bool(enabled)
+    control_surface.song().punch_in = value
+    return {"punch_in": value}
+
+
+def set_punch_out(control_surface, params):
+    """Enable or disable punch out."""
+    enabled = params.get("enabled")
+    if enabled is None:
+        raise ValueError("Missing required parameter: enabled")
+    value = bool(enabled)
+    control_surface.song().punch_out = value
+    return {"punch_out": value}
+
+
+def re_enable_automation(control_surface, params):
+    """Re-enable automation that was overridden by manual changes."""
+    control_surface.song().re_enable_automation()
+    return {"re_enabled": True}
+
+
+def get_session_automation_record(control_surface, params):
+    """Return whether session automation recording is enabled."""
+    song = control_surface.song()
+    return {"session_automation_record": song.session_automation_record}
+
+
+def set_session_automation_record(control_surface, params):
+    """Enable or disable session automation recording."""
+    enabled = params.get("enabled")
+    if enabled is None:
+        raise ValueError("Missing required parameter: enabled")
+    value = bool(enabled)
+    control_surface.song().session_automation_record = value
+    return {"session_automation_record": value}
+
+
+def show_message(control_surface, params):
+    """Display a message in the Ableton Live status bar."""
+    message = params.get("message")
+    if message is None:
+        raise ValueError("Missing required parameter: message")
+    msg = str(message)
+    control_surface.show_message(msg)
+    return {"shown": True, "message": msg}
+
+
+def get_session_metadata(control_surface, params):
+    """Return session metadata: modified state, song time, length, and CPU load."""
+    song = control_surface.song()
+    result = {
+        "current_song_time": song.current_song_time,
+        "song_length": song.song_length,
+    }
+    try:
+        result["is_modified"] = song.is_modified
+    except Exception:
+        pass
+    try:
+        result["current_cpu_load"] = song.current_cpu_load
+    except Exception:
+        pass
+    return result
+
+
+def get_song_smpte_time(control_surface, params):
+    """Return the current song time in SMPTE format."""
+    song = control_surface.song()
+    smpte = song.get_current_smpte_song_time(0)
+    return {
+        "hours": smpte.hours,
+        "minutes": smpte.minutes,
+        "seconds": smpte.seconds,
+        "frames": smpte.frames,
+    }
+
+
+def get_scene_info(control_surface, params):
+    """Return detailed info about a scene by index, including clip count."""
+    song = control_surface.song()
+    scene_index = params.get("scene_index")
+    if scene_index is None:
+        raise ValueError("Missing required parameter: scene_index")
+    scene_index = int(scene_index)
+    if scene_index < 0 or scene_index >= len(song.scenes):
+        raise ValueError("Scene index {0} out of range (0-{1})".format(
+            scene_index, len(song.scenes) - 1))
+    scene = song.scenes[scene_index]
+    result = {
+        "index": scene_index,
+        "name": scene.name,
+        "color": scene.color,
+    }
+    try:
+        if scene.tempo_enabled:
+            result["tempo"] = scene.tempo
+    except AttributeError:
+        pass
+    try:
+        result["time_signature_numerator"] = scene.time_signature_numerator
+        result["time_signature_denominator"] = scene.time_signature_denominator
+    except AttributeError:
+        pass
+    try:
+        result["is_empty"] = scene.is_empty
+    except Exception:
+        pass
+    # Count clips across all tracks for this scene
+    clip_count = 0
+    for track in song.tracks:
+        if scene_index < len(track.clip_slots):
+            if track.clip_slots[scene_index].has_clip:
+                clip_count += 1
+    result["clip_count"] = clip_count
+    return result
+
+
+def get_scene_clips(control_surface, params):
+    """Get all clips in a scene across all tracks."""
+    song = control_surface.song()
+    scene_index = params.get("scene_index")
+    if scene_index is None:
+        raise ValueError("Missing required parameter: scene_index")
+    scene_index = int(scene_index)
+    if scene_index < 0 or scene_index >= len(song.scenes):
+        raise ValueError("Scene index {0} out of range (0-{1})".format(
+            scene_index, len(song.scenes) - 1))
+
+    clips = []
+    for i, track in enumerate(song.tracks):
+        if scene_index < len(track.clip_slots):
+            slot = track.clip_slots[scene_index]
+            clip_info = {
+                "track_index": i,
+                "track_name": track.name,
+                "has_clip": slot.has_clip,
+                "clip_name": slot.clip.name if slot.has_clip else None,
+                "is_playing": slot.is_playing,
+                "is_recording": slot.is_recording,
+                "is_triggered": slot.is_triggered,
+                "color": slot.clip.color if slot.has_clip else None,
+            }
+            clips.append(clip_info)
+
+    return {"scene_index": scene_index, "clips": clips}
+
+
 READ_HANDLERS = {
     "get_session_info": get_session_info,
     "get_song_time": get_song_time,
@@ -490,6 +715,13 @@ READ_HANDLERS = {
     "get_scene_properties": get_scene_properties,
     "get_application_info": get_application_info,
     "get_record_mode": get_record_mode,
+    "get_view_state": get_view_state,
+    "get_punch_state": get_punch_state,
+    "get_session_automation_record": get_session_automation_record,
+    "get_session_metadata": get_session_metadata,
+    "get_song_smpte_time": get_song_smpte_time,
+    "get_scene_info": get_scene_info,
+    "get_scene_clips": get_scene_clips,
 }
 
 WRITE_HANDLERS = {
@@ -522,4 +754,12 @@ WRITE_HANDLERS = {
     "capture_and_insert_scene": capture_and_insert_scene,
     "create_locator": create_locator,
     "delete_locator": delete_locator,
+    "set_follow_song": set_follow_song,
+    "set_draw_mode": set_draw_mode,
+    "select_clip_in_detail": select_clip_in_detail,
+    "set_punch_in": set_punch_in,
+    "set_punch_out": set_punch_out,
+    "re_enable_automation": re_enable_automation,
+    "set_session_automation_record": set_session_automation_record,
+    "show_message": show_message,
 }

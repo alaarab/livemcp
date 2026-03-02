@@ -350,6 +350,49 @@ def set_return_track_send(return_index: int, send_index: int, value: float) -> s
     return json.dumps(result)
 
 
+def set_track_properties(
+    track_index: int,
+    name: str = None,
+    volume: float = None,
+    pan: float = None,
+    mute: bool = None,
+    solo: bool = None,
+    arm: bool = None,
+    color: int = None,
+) -> str:
+    """Set multiple track properties in a single call.
+
+    Only provided properties are changed; omitted ones are left unchanged.
+
+    Args:
+        track_index: Zero-based index of the track.
+        name: New name for the track.
+        volume: Volume value (0.0 to 1.0).
+        pan: Pan value (-1.0 left to 1.0 right).
+        mute: True to mute, False to unmute.
+        solo: True to solo, False to unsolo.
+        arm: True to arm for recording, False to disarm.
+        color: Ableton color palette index.
+    """
+    params = {"track_index": track_index}
+    if name is not None:
+        params["name"] = name
+    if volume is not None:
+        params["volume"] = volume
+    if pan is not None:
+        params["pan"] = pan
+    if mute is not None:
+        params["mute"] = mute
+    if solo is not None:
+        params["solo"] = solo
+    if arm is not None:
+        params["arm"] = arm
+    if color is not None:
+        params["color"] = color
+    result = get_connection().send_command("set_track_properties", params)
+    return json.dumps(result)
+
+
 TOOLS = [
     get_track_info,
     create_midi_track,
@@ -378,4 +421,5 @@ TOOLS = [
     get_return_track_sends,
     set_clip_slot_color,
     set_return_track_send,
+    set_track_properties,
 ]

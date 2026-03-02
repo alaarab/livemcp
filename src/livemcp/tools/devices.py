@@ -147,6 +147,23 @@ def get_return_device_parameters(return_index: int, device_index: int) -> str:
     return json.dumps(result)
 
 
+def get_device_display_values(track_index: int, device_index: int) -> str:
+    """Get all parameters of a device with both raw value and human-readable display value.
+
+    Similar to get_device_parameters but also includes is_enabled and the formatted
+    display_value string (e.g. "100 Hz", "-6.0 dB") alongside the raw numeric value.
+
+    Args:
+        track_index: Zero-based index of the track.
+        device_index: Zero-based index of the device in the track's device chain.
+    """
+    result = get_connection().send_command("get_device_display_values", {
+        "track_index": track_index,
+        "device_index": device_index,
+    })
+    return json.dumps(result)
+
+
 def get_rack_chains(track_index: int, device_index: int) -> str:
     """Get all chains in an instrument or effect rack device.
 
@@ -363,6 +380,7 @@ TOOLS = [
     load_instrument_or_effect,
     load_drum_kit,
     get_device_parameters,
+    get_device_display_values,
     set_device_parameter,
     get_master_track_devices,
     get_return_track_devices,

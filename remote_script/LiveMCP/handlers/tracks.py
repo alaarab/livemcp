@@ -636,6 +636,47 @@ def set_return_track_send(control_surface, params):
     return {"return_index": return_index, "send_index": send_index, "value": value}
 
 
+def set_track_properties(control_surface, params):
+    """Set multiple track properties in one call."""
+    track_index = params.get("track_index")
+    if track_index is None:
+        raise ValueError("Missing required parameter: track_index")
+    track_index = int(track_index)
+    song = control_surface.song()
+
+    if track_index < 0 or track_index >= len(song.tracks):
+        raise ValueError("Track index {0} out of range (0-{1})".format(
+            track_index, len(song.tracks) - 1))
+
+    track = song.tracks[track_index]
+    mixer = track.mixer_device
+    result = {"track_index": track_index}
+
+    if "name" in params:
+        track.name = str(params["name"])
+        result["name"] = track.name
+    if "volume" in params:
+        mixer.volume.value = float(params["volume"])
+        result["volume"] = mixer.volume.value
+    if "pan" in params:
+        mixer.panning.value = float(params["pan"])
+        result["pan"] = mixer.panning.value
+    if "mute" in params:
+        track.mute = bool(params["mute"])
+        result["mute"] = track.mute
+    if "solo" in params:
+        track.solo = bool(params["solo"])
+        result["solo"] = track.solo
+    if "arm" in params:
+        track.arm = bool(params["arm"])
+        result["arm"] = track.arm
+    if "color" in params:
+        track.color_index = int(params["color"])
+        result["color"] = track.color_index
+
+    return result
+
+
 READ_HANDLERS = {
     "get_track_info": get_track_info,
     "get_return_tracks": get_return_tracks,
@@ -667,4 +708,5 @@ WRITE_HANDLERS = {
     "fold_track": fold_track,
     "set_clip_slot_color": set_clip_slot_color,
     "set_return_track_send": set_return_track_send,
+    "set_track_properties": set_track_properties,
 }

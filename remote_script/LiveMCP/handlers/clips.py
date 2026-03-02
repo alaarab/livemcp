@@ -208,38 +208,6 @@ def create_scene(control_surface, params):
     return {"scene_index": index}
 
 
-def get_scene_info(control_surface, params):
-    """Get info about a specific scene."""
-    scene_index = params.get("scene_index")
-    if scene_index is None:
-        raise ValueError("Missing required parameter: scene_index")
-    scene_index = int(scene_index)
-    song = control_surface.song()
-
-    if scene_index < 0 or scene_index >= len(song.scenes):
-        raise ValueError("Scene index {0} out of range (0-{1})".format(
-            scene_index, len(song.scenes) - 1))
-
-    scene = song.scenes[scene_index]
-    clip_info = []
-    for i, track in enumerate(song.tracks):
-        if scene_index < len(track.clip_slots):
-            slot = track.clip_slots[scene_index]
-            clip_info.append({
-                "track_index": i,
-                "track_name": track.name,
-                "has_clip": slot.has_clip,
-                "clip_name": slot.clip.name if slot.has_clip else None,
-            })
-
-    return {
-        "scene_index": scene_index,
-        "name": scene.name,
-        "color_index": scene.color_index,
-        "clip_count": sum(1 for c in clip_info if c["has_clip"]),
-        "clips": clip_info,
-    }
-
 
 def remove_notes_from_clip(control_surface, params):
     """Remove MIDI notes from a clip within a pitch/time range."""
@@ -918,12 +886,203 @@ def set_clip_velocity_amount(control_surface, params):
     return {"track_index": track_index, "clip_index": clip_index, "velocity_amount": clip.velocity_amount}
 
 
+def set_clip_warping(control_surface, params):
+    """Set warping on or off for an audio clip."""
+    song = control_surface.song()
+    track, slot, clip = _get_track_and_clip(song, params)
+    track_index = int(params["track_index"])
+    clip_index = int(params["clip_index"])
+    warping = params.get("warping")
+    if warping is None:
+        raise ValueError("Missing required parameter: warping")
+    if clip is None:
+        raise ValueError("No clip in track {0}, slot {1}".format(track_index, clip_index))
+    if not clip.is_audio_clip:
+        raise ValueError("Warping is only available for audio clips")
+    clip.warping = bool(warping)
+    return {"track_index": track_index, "clip_index": clip_index, "warping": clip.warping}
+
+
+def get_clip_playing_position(control_surface, params):
+    """Get the current playing position and playback state of a clip."""
+    song = control_surface.song()
+    track, slot, clip = _get_track_and_clip(song, params)
+    track_index = int(params["track_index"])
+    clip_index = int(params["clip_index"])
+    if clip is None:
+        raise ValueError("No clip in track {0}, slot {1}".format(track_index, clip_index))
+    return {
+        "track_index": track_index,
+        "clip_index": clip_index,
+        "playing_position": clip.playing_position,
+        "is_playing": clip.is_playing,
+        "is_triggered": clip.is_triggered,
+    }
+
+
+def get_clip_fades(control_surface, params):
+    """Get fade in/out lengths for an audio clip."""
+    song = control_surface.song()
+    track, slot, clip = _get_track_and_clip(song, params)
+    track_index = int(params["track_index"])
+    clip_index = int(params["clip_index"])
+    if clip is None:
+        raise ValueError("No clip in track {0}, slot {1}".format(track_index, clip_index))
+    if not clip.is_audio_clip:
+        raise ValueError("Fades are only available for audio clips")
+    return {
+        "track_index": track_index,
+        "clip_index": clip_index,
+        "fade_in_length": clip.fade_in_length,
+        "fade_out_length": clip.fade_out_length,
+    }
+
+
+def set_clip_fades(control_surface, params):
+    """Set fade in/out lengths for an audio clip."""
+    song = control_surface.song()
+    track, slot, clip = _get_track_and_clip(song, params)
+    track_index = int(params["track_index"])
+    clip_index = int(params["clip_index"])
+    if clip is None:
+        raise ValueError("No clip in track {0}, slot {1}".format(track_index, clip_index))
+    if not clip.is_audio_clip:
+        raise ValueError("Fades are only available for audio clips")
+    if "fade_in_length" in params:
+        clip.fade_in_length = float(params["fade_in_length"])
+    if "fade_out_length" in params:
+        clip.fade_out_length = float(params["fade_out_length"])
+    return {
+        "track_index": track_index,
+        "clip_index": clip_index,
+        "fade_in_length": clip.fade_in_length,
+        "fade_out_length": clip.fade_out_length,
+    }
+
+
+def replace_all_notes(control_surface, params):
+    """Atomically replace all MIDI notes in a clip."""
+    from Live.Clip import MidiNoteSpecification
+    song = control_surface.song()
+    track, slot, clip = _get_track_and_clip(song, params)
+
+    if clip is None:
+        raise ValueError("No clip in track {0}, slot {1}".format(
+            params["track_index"], params["clip_index"]))
+
+    notes_data = params.get("notes", [])
+
+    clip.remove_notes_extended(from_pitch=0, pitch_span=128, from_time=0, time_span=999999)
+
+    specs = []
+    for note in notes_data:
+        spec = MidiNoteSpecification(
+            pitch=int(note["pitch"]),
+            start_time=float(note["start_time"]),
+            duration=float(note["duration"]),
+            velocity=float(note.get("velocity", 100)),
+            mute=bool(note.get("mute", False)),
+            probability=float(note.get("probability", 1.0)),
+            velocity_deviation=float(note.get("velocity_deviation", 0.0)),
+            release_velocity=float(note.get("release_velocity", 64.0)),
+        )
+        specs.append(spec)
+
+    clip.add_new_notes(tuple(specs))
+    return {
+        "track_index": int(params["track_index"]),
+        "clip_index": int(params["clip_index"]),
+        "notes_replaced": len(notes_data),
+    }
+
+
+def remove_notes_extended(control_surface, params):
+    """Remove MIDI notes by pitch/time range using remove_notes_extended."""
+    song = control_surface.song()
+    track, slot, clip = _get_track_and_clip(song, params)
+
+    if clip is None:
+        raise ValueError("No clip in track {0}, slot {1}".format(
+            params["track_index"], params["clip_index"]))
+
+    from_pitch = params.get("from_pitch")
+    pitch_span = params.get("pitch_span")
+    from_time = params.get("from_time")
+    time_span = params.get("time_span")
+
+    if from_pitch is None:
+        raise ValueError("Missing required parameter: from_pitch")
+    if pitch_span is None:
+        raise ValueError("Missing required parameter: pitch_span")
+    if from_time is None:
+        raise ValueError("Missing required parameter: from_time")
+    if time_span is None:
+        raise ValueError("Missing required parameter: time_span")
+
+    clip.remove_notes_extended(int(from_pitch), int(pitch_span), float(from_time), float(time_span))
+    return {
+        "track_index": int(params["track_index"]),
+        "clip_index": int(params["clip_index"]),
+        "removed": True,
+    }
+
+
+def set_clip_properties(control_surface, params):
+    """Set multiple clip properties in one call."""
+    song = control_surface.song()
+    track, slot, clip = _get_track_and_clip(song, params)
+    track_index = int(params["track_index"])
+    clip_index = int(params["clip_index"])
+
+    if clip is None:
+        raise ValueError("No clip in track {0}, slot {1}".format(track_index, clip_index))
+
+    result = {"track_index": track_index, "clip_index": clip_index}
+
+    if "name" in params:
+        clip.name = str(params["name"])
+        result["name"] = clip.name
+    if "color" in params:
+        clip.color_index = int(params["color"])
+        result["color"] = clip.color_index
+    if "mute" in params:
+        clip.muted = bool(params["mute"])
+        result["muted"] = clip.muted
+    if "gain" in params:
+        clip.gain = float(params["gain"])
+        result["gain"] = clip.gain
+    if "pitch_coarse" in params:
+        clip.pitch_coarse = int(params["pitch_coarse"])
+        result["pitch_coarse"] = clip.pitch_coarse
+    if "pitch_fine" in params:
+        clip.pitch_fine = float(params["pitch_fine"])
+        result["pitch_fine"] = clip.pitch_fine
+    if "looping" in params:
+        clip.looping = bool(params["looping"])
+        result["looping"] = clip.looping
+    if "loop_start" in params:
+        clip.loop_start = float(params["loop_start"])
+        result["loop_start"] = clip.loop_start
+    if "loop_end" in params:
+        clip.loop_end = float(params["loop_end"])
+        result["loop_end"] = clip.loop_end
+    if "start_marker" in params:
+        clip.start_marker = float(params["start_marker"])
+        result["start_marker"] = clip.start_marker
+    if "end_marker" in params:
+        clip.end_marker = float(params["end_marker"])
+        result["end_marker"] = clip.end_marker
+
+    return result
+
+
 READ_HANDLERS = {
     "get_notes_from_clip": get_notes_from_clip,
-    "get_scene_info": get_scene_info,
     "get_clip_envelope": get_clip_envelope,
     "get_notes_extended": get_notes_extended,
     "get_clip_properties": get_clip_properties,
+    "get_clip_playing_position": get_clip_playing_position,
+    "get_clip_fades": get_clip_fades,
 }
 
 WRITE_HANDLERS = {
@@ -955,4 +1114,9 @@ WRITE_HANDLERS = {
     "modify_notes": modify_notes,
     "set_clip_ram_mode": set_clip_ram_mode,
     "set_clip_velocity_amount": set_clip_velocity_amount,
+    "set_clip_warping": set_clip_warping,
+    "set_clip_fades": set_clip_fades,
+    "replace_all_notes": replace_all_notes,
+    "remove_notes_extended": remove_notes_extended,
+    "set_clip_properties": set_clip_properties,
 }

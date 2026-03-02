@@ -374,6 +374,165 @@ def delete_locator(index: int) -> str:
     return json.dumps(result)
 
 
+def get_view_state() -> str:
+    """Get the current view state in Ableton Live.
+
+    Returns the selected track, detail clip (if any), draw mode, and follow song state.
+    """
+    result = get_connection().send_command("get_view_state", {})
+    return json.dumps(result)
+
+
+def set_follow_song(enabled: bool) -> str:
+    """Enable or disable Follow Song mode (auto-scroll to follow playhead).
+
+    Args:
+        enabled: True to enable, False to disable.
+    """
+    result = get_connection().send_command("set_follow_song", {"enabled": enabled})
+    return json.dumps(result)
+
+
+def set_draw_mode(enabled: bool) -> str:
+    """Enable or disable Draw Mode for editing in Ableton Live.
+
+    Args:
+        enabled: True to enable, False to disable.
+    """
+    result = get_connection().send_command("set_draw_mode", {"enabled": enabled})
+    return json.dumps(result)
+
+
+def select_clip_in_detail(track_index: int, clip_index: int) -> str:
+    """Select a clip and show it in the Detail View.
+
+    Args:
+        track_index: Zero-based index of the track.
+        clip_index: Zero-based index of the clip slot.
+    """
+    result = get_connection().send_command("select_clip_in_detail", {
+        "track_index": track_index,
+        "clip_index": clip_index,
+    })
+    return json.dumps(result)
+
+
+def get_punch_state() -> str:
+    """Get the punch in/out state.
+
+    Returns whether punch_in and punch_out are enabled.
+    """
+    result = get_connection().send_command("get_punch_state", {})
+    return json.dumps(result)
+
+
+def set_punch_in(enabled: bool) -> str:
+    """Enable or disable punch in for recording.
+
+    Args:
+        enabled: True to enable punch in, False to disable.
+    """
+    result = get_connection().send_command("set_punch_in", {"enabled": enabled})
+    return json.dumps(result)
+
+
+def set_punch_out(enabled: bool) -> str:
+    """Enable or disable punch out for recording.
+
+    Args:
+        enabled: True to enable punch out, False to disable.
+    """
+    result = get_connection().send_command("set_punch_out", {"enabled": enabled})
+    return json.dumps(result)
+
+
+def re_enable_automation() -> str:
+    """Re-enable automation that was overridden by manual parameter changes.
+
+    When you manually adjust an automated parameter, the automation is
+    overridden. This re-enables all overridden automation.
+    """
+    result = get_connection().send_command("re_enable_automation", {})
+    return json.dumps(result)
+
+
+def get_session_automation_record() -> str:
+    """Get whether session automation recording is enabled.
+
+    Returns session_automation_record (True if enabled).
+    """
+    result = get_connection().send_command("get_session_automation_record", {})
+    return json.dumps(result)
+
+
+def set_session_automation_record(enabled: bool) -> str:
+    """Enable or disable session automation recording.
+
+    When enabled, parameter changes during playback are recorded as automation.
+
+    Args:
+        enabled: True to enable, False to disable.
+    """
+    result = get_connection().send_command("set_session_automation_record", {"enabled": enabled})
+    return json.dumps(result)
+
+
+def show_message(message: str) -> str:
+    """Display a message in the Ableton Live status bar.
+
+    Args:
+        message: Text to display in the status bar.
+    """
+    result = get_connection().send_command("show_message", {"message": message})
+    return json.dumps(result)
+
+
+def get_session_metadata() -> str:
+    """Get session metadata: modified state, current song time, song length, and CPU load.
+
+    Returns is_modified, current_song_time (beats), song_length (beats),
+    and current_cpu_load (if available).
+    """
+    result = get_connection().send_command("get_session_metadata", {})
+    return json.dumps(result)
+
+
+def get_song_smpte_time() -> str:
+    """Get the current song time in SMPTE (timecode) format.
+
+    Returns hours, minutes, seconds, and frames.
+    """
+    result = get_connection().send_command("get_song_smpte_time", {})
+    return json.dumps(result)
+
+
+def get_scene_info(scene_index: int) -> str:
+    """Get detailed information about a specific scene.
+
+    Returns the scene name, color, tempo (if tempo_enabled), time signature
+    (if available), is_empty flag (if available), and clip_count across all tracks.
+
+    Args:
+        scene_index: Zero-based index of the scene.
+    """
+    result = get_connection().send_command("get_scene_info", {"scene_index": scene_index})
+    return json.dumps(result)
+
+
+def get_scene_clips(scene_index: int) -> str:
+    """Get all clips in a scene across all tracks.
+
+    Returns clip status for every track at the given scene index, including
+    track name, whether a clip is present, clip name and color, and
+    playing/recording/triggered state.
+
+    Args:
+        scene_index: Zero-based index of the scene.
+    """
+    result = get_connection().send_command("get_scene_clips", {"scene_index": scene_index})
+    return json.dumps(result)
+
+
 TOOLS = [
     get_session_info,
     get_song_time,
@@ -412,4 +571,19 @@ TOOLS = [
     capture_and_insert_scene,
     create_locator,
     delete_locator,
+    get_view_state,
+    set_follow_song,
+    set_draw_mode,
+    select_clip_in_detail,
+    get_punch_state,
+    set_punch_in,
+    set_punch_out,
+    re_enable_automation,
+    get_session_automation_record,
+    set_session_automation_record,
+    show_message,
+    get_session_metadata,
+    get_song_smpte_time,
+    get_scene_info,
+    get_scene_clips,
 ]

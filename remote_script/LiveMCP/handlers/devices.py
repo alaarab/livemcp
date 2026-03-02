@@ -272,6 +272,27 @@ def get_return_device_parameters(control_surface, params):
     }
 
 
+def get_device_display_values(control_surface, params):
+    """Get all parameters of a device with both raw and display values."""
+    song = control_surface.song()
+    track, device = _get_device(song, params)
+    parameters = []
+    for param in device.parameters:
+        param_info = {
+            "name": param.name,
+            "value": param.value,
+            "min": param.min,
+            "max": param.max,
+            "is_enabled": param.is_enabled,
+        }
+        try:
+            param_info["display_value"] = str(param)
+        except Exception:
+            param_info["display_value"] = str(param.value)
+        parameters.append(param_info)
+    return {"device_name": device.name, "parameters": parameters}
+
+
 def get_rack_chains(control_surface, params):
     """List chains inside an instrument or effect rack."""
     song = control_surface.song()
@@ -579,6 +600,7 @@ READ_HANDLERS = {
     "get_browser_tree": get_browser_tree,
     "get_browser_items_at_path": get_browser_items_at_path,
     "get_device_parameters": get_device_parameters,
+    "get_device_display_values": get_device_display_values,
     "get_master_track_devices": get_master_track_devices,
     "get_return_track_devices": get_return_track_devices,
     "get_master_device_parameters": get_master_device_parameters,

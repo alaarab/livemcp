@@ -140,15 +140,6 @@ def create_scene(index: int = -1) -> str:
     return json.dumps(result)
 
 
-def get_scene_info(scene_index: int) -> str:
-    """Get information about a specific scene.
-
-    Args:
-        scene_index: Zero-based index of the scene.
-    """
-    result = get_connection().send_command("get_scene_info", {"scene_index": scene_index})
-    return json.dumps(result)
-
 
 def remove_notes_from_clip(
     track_index: int,
@@ -629,6 +620,201 @@ def set_clip_velocity_amount(track_index: int, clip_index: int, velocity_amount:
     return json.dumps(result)
 
 
+def set_clip_warping(track_index: int, clip_index: int, warping: bool) -> str:
+    """Enable or disable warping on an audio clip.
+
+    Warping allows the clip to follow the session tempo. Only available for audio clips.
+
+    Args:
+        track_index: Zero-based index of the track.
+        clip_index: Zero-based index of the clip slot.
+        warping: True to enable warping, False to disable.
+    """
+    result = get_connection().send_command("set_clip_warping", {
+        "track_index": track_index,
+        "clip_index": clip_index,
+        "warping": warping,
+    })
+    return json.dumps(result)
+
+
+def get_clip_playing_position(track_index: int, clip_index: int) -> str:
+    """Get the current playback position and state of a clip.
+
+    Returns playing_position (beat position within the clip), is_playing,
+    and is_triggered (clip is queued to play).
+
+    Args:
+        track_index: Zero-based index of the track.
+        clip_index: Zero-based index of the clip slot.
+    """
+    result = get_connection().send_command("get_clip_playing_position", {
+        "track_index": track_index,
+        "clip_index": clip_index,
+    })
+    return json.dumps(result)
+
+
+def get_clip_fades(track_index: int, clip_index: int) -> str:
+    """Get the fade in and fade out lengths of an audio clip.
+
+    Returns fade_in_length and fade_out_length in beats. Only available for audio clips.
+
+    Args:
+        track_index: Zero-based index of the track.
+        clip_index: Zero-based index of the clip slot.
+    """
+    result = get_connection().send_command("get_clip_fades", {
+        "track_index": track_index,
+        "clip_index": clip_index,
+    })
+    return json.dumps(result)
+
+
+def set_clip_fades(
+    track_index: int,
+    clip_index: int,
+    fade_in_length: float = None,
+    fade_out_length: float = None,
+) -> str:
+    """Set the fade in and/or fade out lengths of an audio clip.
+
+    Only provided values are changed. Returns the final fade_in_length and
+    fade_out_length. Only available for audio clips.
+
+    Args:
+        track_index: Zero-based index of the track.
+        clip_index: Zero-based index of the clip slot.
+        fade_in_length: Fade in length in beats.
+        fade_out_length: Fade out length in beats.
+    """
+    params = {
+        "track_index": track_index,
+        "clip_index": clip_index,
+    }
+    if fade_in_length is not None:
+        params["fade_in_length"] = fade_in_length
+    if fade_out_length is not None:
+        params["fade_out_length"] = fade_out_length
+    result = get_connection().send_command("set_clip_fades", params)
+    return json.dumps(result)
+
+
+def replace_all_notes(track_index: int, clip_index: int, notes: list) -> str:
+    """Atomically replace all MIDI notes in a clip.
+
+    Removes every existing note then adds the provided notes in one operation.
+    Each note is a dict with pitch, start_time, duration, and optionally velocity,
+    mute, probability, velocity_deviation, release_velocity.
+
+    Args:
+        track_index: Zero-based index of the track.
+        clip_index: Zero-based index of the clip slot.
+        notes: List of note dicts with pitch, start_time, duration, velocity,
+               and optional probability, velocity_deviation, release_velocity, mute.
+    """
+    result = get_connection().send_command("replace_all_notes", {
+        "track_index": track_index,
+        "clip_index": clip_index,
+        "notes": notes,
+    })
+    return json.dumps(result)
+
+
+def remove_notes_extended(
+    track_index: int,
+    clip_index: int,
+    from_pitch: int,
+    pitch_span: int,
+    from_time: float,
+    time_span: float,
+) -> str:
+    """Remove MIDI notes from a clip within an explicit pitch and time range.
+
+    All four range parameters are required. Use from_pitch=0, pitch_span=128
+    to span all pitches; use from_time=0 and time_span=999999 to span the
+    full clip.
+
+    Args:
+        track_index: Zero-based index of the track.
+        clip_index: Zero-based index of the clip slot.
+        from_pitch: Starting MIDI pitch (0-127).
+        pitch_span: Number of pitches to cover (1-128).
+        from_time: Start time in beats.
+        time_span: Duration in beats to remove notes within.
+    """
+    result = get_connection().send_command("remove_notes_extended", {
+        "track_index": track_index,
+        "clip_index": clip_index,
+        "from_pitch": from_pitch,
+        "pitch_span": pitch_span,
+        "from_time": from_time,
+        "time_span": time_span,
+    })
+    return json.dumps(result)
+
+
+def set_clip_properties(
+    track_index: int,
+    clip_index: int,
+    name: str = None,
+    color: int = None,
+    mute: bool = None,
+    gain: float = None,
+    pitch_coarse: int = None,
+    pitch_fine: float = None,
+    looping: bool = None,
+    loop_start: float = None,
+    loop_end: float = None,
+    start_marker: float = None,
+    end_marker: float = None,
+) -> str:
+    """Set multiple clip properties in a single call.
+
+    Only provided properties are changed; omitted ones are left unchanged.
+
+    Args:
+        track_index: Zero-based index of the track.
+        clip_index: Zero-based index of the clip slot.
+        name: New name for the clip.
+        color: Ableton color palette index.
+        mute: True to mute (deactivate) the clip, False to unmute.
+        gain: Gain value for audio clips.
+        pitch_coarse: Coarse pitch transposition in semitones (-48 to 48).
+        pitch_fine: Fine pitch transposition in cents (-50.0 to 50.0).
+        looping: Enable or disable looping.
+        loop_start: Loop start position in beats.
+        loop_end: Loop end position in beats.
+        start_marker: Start marker position in beats.
+        end_marker: End marker position in beats.
+    """
+    params = {"track_index": track_index, "clip_index": clip_index}
+    if name is not None:
+        params["name"] = name
+    if color is not None:
+        params["color"] = color
+    if mute is not None:
+        params["mute"] = mute
+    if gain is not None:
+        params["gain"] = gain
+    if pitch_coarse is not None:
+        params["pitch_coarse"] = pitch_coarse
+    if pitch_fine is not None:
+        params["pitch_fine"] = pitch_fine
+    if looping is not None:
+        params["looping"] = looping
+    if loop_start is not None:
+        params["loop_start"] = loop_start
+    if loop_end is not None:
+        params["loop_end"] = loop_end
+    if start_marker is not None:
+        params["start_marker"] = start_marker
+    if end_marker is not None:
+        params["end_marker"] = end_marker
+    result = get_connection().send_command("set_clip_properties", params)
+    return json.dumps(result)
+
+
 TOOLS = [
     create_clip,
     set_clip_name,
@@ -639,7 +825,6 @@ TOOLS = [
     stop_clip,
     fire_scene,
     create_scene,
-    get_scene_info,
     remove_notes_from_clip,
     clear_clip_notes,
     set_clip_loop,
@@ -663,4 +848,11 @@ TOOLS = [
     get_clip_properties,
     set_clip_ram_mode,
     set_clip_velocity_amount,
+    set_clip_warping,
+    get_clip_playing_position,
+    get_clip_fades,
+    set_clip_fades,
+    replace_all_notes,
+    remove_notes_extended,
+    set_clip_properties,
 ]
