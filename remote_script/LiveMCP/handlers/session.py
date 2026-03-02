@@ -308,12 +308,72 @@ def set_selected_scene(control_surface, params):
     return {"selected_scene_index": scene_index}
 
 
+def get_scene_properties(control_surface, params):
+    """Get properties of a specific scene."""
+    song = control_surface.song()
+    scene_index = params.get("scene_index")
+    if scene_index is None:
+        raise ValueError("Missing required parameter: scene_index")
+    scene_index = int(scene_index)
+    if scene_index < 0 or scene_index >= len(song.scenes):
+        raise ValueError("Scene index {0} out of range".format(scene_index))
+    scene = song.scenes[scene_index]
+    result = {
+        "index": scene_index,
+        "name": scene.name,
+        "tempo": scene.tempo,  # -1.0 means no scene tempo set
+        "color": scene.color,
+        "color_index": scene.color_index,
+    }
+    try:
+        result["tempo_enabled"] = scene.tempo_enabled
+        result["time_signature_numerator"] = scene.time_signature_numerator
+        result["time_signature_denominator"] = scene.time_signature_denominator
+        result["time_signature_enabled"] = scene.time_signature_enabled
+    except AttributeError:
+        pass  # Live 12-only properties
+    return result
+
+
+def set_scene_tempo(control_surface, params):
+    """Set the tempo for a scene. Use 0 to clear scene tempo."""
+    song = control_surface.song()
+    scene_index = int(params.get("scene_index"))
+    tempo = float(params.get("tempo"))
+    scene = song.scenes[scene_index]
+    if tempo <= 0:
+        try:
+            scene.tempo_enabled = False
+        except AttributeError:
+            scene.tempo = 120.0  # fallback: can't clear on older Live
+    else:
+        scene.tempo = tempo
+        try:
+            scene.tempo_enabled = True
+        except AttributeError:
+            pass
+    return {"scene_index": scene_index, "tempo": scene.tempo}
+
+
+def set_scene_time_signature(control_surface, params):
+    """Set time signature for a scene (Live 12+)."""
+    song = control_surface.song()
+    scene_index = int(params.get("scene_index"))
+    numerator = int(params.get("numerator"))
+    denominator = int(params.get("denominator"))
+    scene = song.scenes[scene_index]
+    scene.time_signature_numerator = numerator
+    scene.time_signature_denominator = denominator
+    return {"scene_index": scene_index, "numerator": numerator, "denominator": denominator}
+
+
 READ_HANDLERS = {
     "get_session_info": get_session_info,
     "get_song_time": get_song_time,
     "get_cue_points": get_cue_points,
     "get_selected_track": get_selected_track,
     "get_selected_scene": get_selected_scene,
+    "get_scene_properties": get_scene_properties,
 }
 
 WRITE_HANDLERS = {
@@ -340,4 +400,6 @@ WRITE_HANDLERS = {
     "tap_tempo": tap_tempo,
     "set_selected_track": set_selected_track,
     "set_selected_scene": set_selected_scene,
+    "set_scene_tempo": set_scene_tempo,
+    "set_scene_time_signature": set_scene_time_signature,
 }

@@ -266,6 +266,51 @@ def set_selected_scene(scene_index: int) -> str:
     return json.dumps(result)
 
 
+def get_scene_properties(scene_index: int) -> str:
+    """Get properties of a specific scene.
+
+    Returns the scene name, tempo (-1.0 if not set), color, color_index,
+    and (Live 12+) tempo_enabled, time_signature_numerator/denominator/enabled.
+
+    Args:
+        scene_index: Zero-based index of the scene.
+    """
+    result = get_connection().send_command("get_scene_properties", {"scene_index": scene_index})
+    return json.dumps(result)
+
+
+def set_scene_tempo(scene_index: int, tempo: float) -> str:
+    """Set the tempo for a specific scene.
+
+    Pass 0 or a negative value to clear the scene tempo (scene will inherit the song tempo).
+
+    Args:
+        scene_index: Zero-based index of the scene.
+        tempo: Tempo in BPM, or -1.0 to clear.
+    """
+    result = get_connection().send_command("set_scene_tempo", {
+        "scene_index": scene_index,
+        "tempo": tempo,
+    })
+    return json.dumps(result)
+
+
+def set_scene_time_signature(scene_index: int, numerator: int, denominator: int) -> str:
+    """Set the time signature for a specific scene (Live 12+).
+
+    Args:
+        scene_index: Zero-based index of the scene.
+        numerator: Time signature numerator (e.g., 4 for 4/4).
+        denominator: Time signature denominator (e.g., 4 for 4/4).
+    """
+    result = get_connection().send_command("set_scene_time_signature", {
+        "scene_index": scene_index,
+        "numerator": numerator,
+        "denominator": denominator,
+    })
+    return json.dumps(result)
+
+
 TOOLS = [
     get_session_info,
     get_song_time,
@@ -295,4 +340,7 @@ TOOLS = [
     set_selected_track,
     get_selected_scene,
     set_selected_scene,
+    get_scene_properties,
+    set_scene_tempo,
+    set_scene_time_signature,
 ]

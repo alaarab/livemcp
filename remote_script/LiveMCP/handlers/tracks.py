@@ -72,6 +72,8 @@ def get_track_info(control_surface, params):
         "pan": mixer.panning.value,
         "clip_slots": clip_slots,
         "devices": devices,
+        "is_frozen": track.is_frozen,
+        "can_be_frozen": track.can_be_frozen,
     }
 
 
@@ -488,12 +490,31 @@ def get_all_tracks_info(control_surface, params):
     return {"tracks": tracks, "track_count": len(tracks)}
 
 
+def get_track_freeze_status(control_surface, params):
+    """Get freeze status of a track."""
+    song = control_surface.song()
+    track_index = params.get("track_index")
+    if track_index is None:
+        raise ValueError("Missing required parameter: track_index")
+    track_index = int(track_index)
+    if track_index < 0 or track_index >= len(song.tracks):
+        raise ValueError("Track index {0} out of range".format(track_index))
+    track = song.tracks[track_index]
+    return {
+        "track_index": track_index,
+        "name": track.name,
+        "is_frozen": track.is_frozen,
+        "can_be_frozen": track.can_be_frozen,
+    }
+
+
 READ_HANDLERS = {
     "get_track_info": get_track_info,
     "get_return_tracks": get_return_tracks,
     "get_track_routing": get_track_routing,
     "get_group_info": get_group_info,
     "get_all_tracks_info": get_all_tracks_info,
+    "get_track_freeze_status": get_track_freeze_status,
 }
 
 WRITE_HANDLERS = {

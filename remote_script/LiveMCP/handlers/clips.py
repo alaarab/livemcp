@@ -736,10 +736,191 @@ def clear_all_clip_envelopes(control_surface, params):
     }
 
 
+def get_notes_extended(control_surface, params):
+    """Get all MIDI notes with extended properties (probability, velocity deviation, release velocity)."""
+    song = control_surface.song()
+    track, slot, clip = _get_track_and_clip(song, params)
+
+    if clip is None:
+        raise ValueError("No clip in track {0}, slot {1}".format(
+            params["track_index"], params["clip_index"]))
+
+    notes = clip.get_notes_extended(from_pitch=0, pitch_span=128, from_time=0.0, time_span=clip.length)
+    result = []
+    for note in notes:
+        result.append({
+            "pitch": note.pitch,
+            "start_time": note.start_time,
+            "duration": note.duration,
+            "velocity": note.velocity,
+            "mute": note.mute,
+            "probability": note.probability,
+            "velocity_deviation": note.velocity_deviation,
+            "release_velocity": note.release_velocity,
+        })
+
+    return {
+        "track_index": int(params["track_index"]),
+        "clip_index": int(params["clip_index"]),
+        "notes": result,
+    }
+
+
+def add_notes_extended(control_surface, params):
+    """Add MIDI notes with extended properties using MidiNoteSpecification."""
+    from Live.Clip import MidiNoteSpecification
+    song = control_surface.song()
+    track, slot, clip = _get_track_and_clip(song, params)
+
+    if clip is None:
+        raise ValueError("No clip in track {0}, slot {1}".format(
+            params["track_index"], params["clip_index"]))
+
+    notes_data = params.get("notes", [])
+    specs = []
+    for note in notes_data:
+        spec = MidiNoteSpecification(
+            pitch=int(note["pitch"]),
+            start_time=float(note["start_time"]),
+            duration=float(note["duration"]),
+            velocity=float(note.get("velocity", 100)),
+            mute=bool(note.get("mute", False)),
+            probability=float(note.get("probability", 1.0)),
+            velocity_deviation=float(note.get("velocity_deviation", 0.0)),
+            release_velocity=float(note.get("release_velocity", 64.0)),
+        )
+        specs.append(spec)
+
+    clip.add_new_notes(tuple(specs))
+    return {
+        "track_index": int(params["track_index"]),
+        "clip_index": int(params["clip_index"]),
+        "notes_added": len(specs),
+    }
+
+
+def modify_notes(control_surface, params):
+    """Modify properties of existing notes (probability, velocity deviation, etc.)."""
+    song = control_surface.song()
+    track, slot, clip = _get_track_and_clip(song, params)
+
+    if clip is None:
+        raise ValueError("No clip in track {0}, slot {1}".format(
+            params["track_index"], params["clip_index"]))
+
+    modifications = params.get("modifications", [])
+    notes = clip.get_notes_extended(from_pitch=0, pitch_span=128, from_time=0.0, time_span=clip.length)
+    modified_count = 0
+
+    for mod in modifications:
+        target_pitch = int(mod["pitch"])
+        target_time = float(mod["start_time"])
+        for note in notes:
+            if note.pitch == target_pitch and abs(note.start_time - target_time) < 0.001:
+                if "probability" in mod:
+                    note.probability = float(mod["probability"])
+                if "velocity_deviation" in mod:
+                    note.velocity_deviation = float(mod["velocity_deviation"])
+                if "release_velocity" in mod:
+                    note.release_velocity = float(mod["release_velocity"])
+                if "velocity" in mod:
+                    note.velocity = float(mod["velocity"])
+                if "mute" in mod:
+                    note.mute = bool(mod["mute"])
+                modified_count += 1
+                break
+
+    clip.apply_note_modifications(notes)
+    return {
+        "track_index": int(params["track_index"]),
+        "clip_index": int(params["clip_index"]),
+        "notes_modified": modified_count,
+    }
+
+
+def get_clip_properties(control_surface, params):
+    """Get comprehensive properties of a clip."""
+    song = control_surface.song()
+    track_index = int(params.get("track_index"))
+    clip_index = int(params.get("clip_index"))
+    track = song.tracks[track_index]
+    clip = track.clip_slots[clip_index].clip
+    if clip is None:
+        raise ValueError("No clip at track {0}, slot {1}".format(track_index, clip_index))
+    result = {
+        "track_index": track_index,
+        "clip_index": clip_index,
+        "name": clip.name,
+        "color": clip.color,
+        "color_index": clip.color_index,
+        "is_audio_clip": clip.is_audio_clip,
+        "is_midi_clip": clip.is_midi_clip,
+        "length": clip.length,
+        "start_marker": clip.start_marker,
+        "end_marker": clip.end_marker,
+        "looping": clip.looping,
+        "loop_start": clip.loop_start,
+        "loop_end": clip.loop_end,
+        "launch_mode": clip.launch_mode,
+        "launch_quantization": clip.launch_quantization,
+        "velocity_amount": clip.velocity_amount,
+        "muted": clip.muted,
+    }
+    try:
+        result["has_groove"] = clip.has_groove
+    except AttributeError:
+        pass
+    if clip.is_audio_clip:
+        result["file_path"] = clip.file_path
+        result["ram_mode"] = clip.ram_mode
+        result["gain"] = clip.gain
+        try:
+            result["gain_display_string"] = clip.gain_display_string
+        except AttributeError:
+            pass
+    return result
+
+
+def set_clip_ram_mode(control_surface, params):
+    """Set RAM mode for an audio clip."""
+    song = control_surface.song()
+    track_index = int(params.get("track_index"))
+    clip_index = int(params.get("clip_index"))
+    ram_mode = params.get("ram_mode")
+    if ram_mode is None:
+        raise ValueError("Missing required parameter: ram_mode")
+    track = song.tracks[track_index]
+    clip = track.clip_slots[clip_index].clip
+    if clip is None:
+        raise ValueError("No clip")
+    if not clip.is_audio_clip:
+        raise ValueError("RAM mode only available for audio clips")
+    clip.ram_mode = bool(ram_mode)
+    return {"track_index": track_index, "clip_index": clip_index, "ram_mode": clip.ram_mode}
+
+
+def set_clip_velocity_amount(control_surface, params):
+    """Set velocity-to-volume amount for a clip."""
+    song = control_surface.song()
+    track_index = int(params.get("track_index"))
+    clip_index = int(params.get("clip_index"))
+    velocity_amount = params.get("velocity_amount")
+    if velocity_amount is None:
+        raise ValueError("Missing required parameter: velocity_amount")
+    track = song.tracks[track_index]
+    clip = track.clip_slots[clip_index].clip
+    if clip is None:
+        raise ValueError("No clip")
+    clip.velocity_amount = float(velocity_amount)
+    return {"track_index": track_index, "clip_index": clip_index, "velocity_amount": clip.velocity_amount}
+
+
 READ_HANDLERS = {
     "get_notes_from_clip": get_notes_from_clip,
     "get_scene_info": get_scene_info,
     "get_clip_envelope": get_clip_envelope,
+    "get_notes_extended": get_notes_extended,
+    "get_clip_properties": get_clip_properties,
 }
 
 WRITE_HANDLERS = {
@@ -767,4 +948,8 @@ WRITE_HANDLERS = {
     "insert_clip_envelope_step": insert_clip_envelope_step,
     "clear_clip_envelope": clear_clip_envelope,
     "clear_all_clip_envelopes": clear_all_clip_envelopes,
+    "add_notes_extended": add_notes_extended,
+    "modify_notes": modify_notes,
+    "set_clip_ram_mode": set_clip_ram_mode,
+    "set_clip_velocity_amount": set_clip_velocity_amount,
 }

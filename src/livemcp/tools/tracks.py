@@ -247,6 +247,21 @@ def fold_track(track_index: int, fold: int) -> str:
     return json.dumps(result)
 
 
+def get_track_freeze_status(track_index: int) -> str:
+    """Get the freeze status of a track.
+
+    Args:
+        track_index: Zero-based index of the track.
+
+    Returns whether the track is frozen and whether it can be frozen.
+    Note: Freezing/flattening cannot be triggered via the API (read-only status).
+    """
+    result = get_connection().send_command("get_track_freeze_status", {
+        "track_index": track_index,
+    })
+    return json.dumps(result)
+
+
 def get_all_tracks_info() -> str:
     """Get summary information for all tracks at once.
 
@@ -279,5 +294,6 @@ TOOLS = [
     set_track_input_routing,
     set_track_output_routing,
     fold_track,
+    get_track_freeze_status,
     get_all_tracks_info,
 ]

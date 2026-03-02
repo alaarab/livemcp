@@ -2,7 +2,7 @@
 
 from mcp.server.fastmcp import FastMCP
 
-from .tools import session, tracks, clips, devices, mixer
+from .tools import session, tracks, clips, devices, mixer, arrangement, grooves
 
 mcp = FastMCP(
     "LiveMCP",
@@ -14,7 +14,8 @@ mcp = FastMCP(
 )
 
 # Register all tool functions from each module
-_all_tools = session.TOOLS + tracks.TOOLS + clips.TOOLS + devices.TOOLS + mixer.TOOLS
+_all_tools = (session.TOOLS + tracks.TOOLS + clips.TOOLS + devices.TOOLS + mixer.TOOLS
+              + arrangement.TOOLS + grooves.TOOLS)
 
 for _fn in _all_tools:
     mcp.tool()(_fn)

@@ -508,6 +508,121 @@ def clear_all_clip_envelopes(track_index: int, clip_index: int) -> str:
     return json.dumps(result)
 
 
+def get_notes_extended(track_index: int, clip_index: int) -> str:
+    """Read all MIDI notes from a clip with extended properties.
+
+    Returns notes with pitch, start_time, duration, velocity, mute,
+    probability, velocity_deviation, and release_velocity.
+
+    Args:
+        track_index: Zero-based index of the track.
+        clip_index: Zero-based index of the clip slot.
+    """
+    result = get_connection().send_command("get_notes_extended", {
+        "track_index": track_index,
+        "clip_index": clip_index,
+    })
+    return json.dumps(result)
+
+
+def add_notes_extended(track_index: int, clip_index: int, notes: list) -> str:
+    """Add MIDI notes with extended properties to a clip.
+
+    Each note is a dict with: pitch (0-127), start_time (beat position),
+    duration (in beats), velocity (0-127), and optionally probability (0.0-1.0),
+    velocity_deviation (-127 to 127), release_velocity (0-127), mute (boolean).
+
+    Args:
+        track_index: Zero-based index of the track.
+        clip_index: Zero-based index of the clip slot.
+        notes: List of note dicts with pitch, start_time, duration, velocity,
+               and optional probability, velocity_deviation, release_velocity, mute.
+    """
+    result = get_connection().send_command("add_notes_extended", {
+        "track_index": track_index,
+        "clip_index": clip_index,
+        "notes": notes,
+    })
+    return json.dumps(result)
+
+
+def modify_notes(track_index: int, clip_index: int, modifications: list) -> str:
+    """Modify properties of existing MIDI notes in a clip.
+
+    Each modification dict must include pitch and start_time to identify the note,
+    plus any properties to change: velocity, probability, velocity_deviation,
+    release_velocity, mute.
+
+    Args:
+        track_index: Zero-based index of the track.
+        clip_index: Zero-based index of the clip slot.
+        modifications: List of modification dicts, each with pitch, start_time,
+                       and properties to modify.
+    """
+    result = get_connection().send_command("modify_notes", {
+        "track_index": track_index,
+        "clip_index": clip_index,
+        "modifications": modifications,
+    })
+    return json.dumps(result)
+
+
+def get_clip_properties(track_index: int, clip_index: int) -> str:
+    """Get comprehensive properties of a clip.
+
+    Returns name, color, color_index, is_audio_clip, is_midi_clip, length,
+    start_marker, end_marker, looping, loop_start, loop_end, launch_mode,
+    launch_quantization, velocity_amount, muted, and has_groove (if available).
+    For audio clips also returns file_path, ram_mode, gain, and gain_display_string.
+
+    Args:
+        track_index: Zero-based index of the track.
+        clip_index: Zero-based index of the clip slot.
+    """
+    result = get_connection().send_command("get_clip_properties", {
+        "track_index": track_index,
+        "clip_index": clip_index,
+    })
+    return json.dumps(result)
+
+
+def set_clip_ram_mode(track_index: int, clip_index: int, ram_mode: bool) -> str:
+    """Set RAM mode for an audio clip.
+
+    When enabled, the clip's audio is loaded into RAM for playback.
+    Only available for audio clips.
+
+    Args:
+        track_index: Zero-based index of the track.
+        clip_index: Zero-based index of the clip slot.
+        ram_mode: True to enable RAM mode, False to disable.
+    """
+    result = get_connection().send_command("set_clip_ram_mode", {
+        "track_index": track_index,
+        "clip_index": clip_index,
+        "ram_mode": ram_mode,
+    })
+    return json.dumps(result)
+
+
+def set_clip_velocity_amount(track_index: int, clip_index: int, velocity_amount: float) -> str:
+    """Set the velocity-to-volume amount for a clip.
+
+    Controls how much note velocity affects clip volume.
+
+    Args:
+        track_index: Zero-based index of the track.
+        clip_index: Zero-based index of the clip slot.
+        velocity_amount: Velocity-to-volume amount (0.0 to 1.0).
+    """
+    result = get_connection().send_command("set_clip_velocity_amount", {
+        "track_index": track_index,
+        "clip_index": clip_index,
+        "velocity_amount": velocity_amount,
+    })
+    return json.dumps(result)
+
+
 TOOLS = [
     create_clip,
     set_clip_name,
@@ -536,4 +651,10 @@ TOOLS = [
     insert_clip_envelope_step,
     clear_clip_envelope,
     clear_all_clip_envelopes,
+    get_notes_extended,
+    add_notes_extended,
+    modify_notes,
+    get_clip_properties,
+    set_clip_ram_mode,
+    set_clip_velocity_amount,
 ]
