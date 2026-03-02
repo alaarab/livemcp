@@ -100,6 +100,53 @@ def get_mixer_state() -> str:
     return json.dumps(result)
 
 
+def get_master_mixer_state() -> str:
+    """Get the mixer state of the master track.
+
+    Returns volume, pan, crossfader value, and a list of devices on the master track.
+    """
+    result = get_connection().send_command("get_master_mixer_state", {})
+    return json.dumps(result)
+
+
+def set_master_volume(volume: float) -> str:
+    """Set the volume of the master track.
+
+    Args:
+        volume: Volume level (0.0 = -inf dB, 0.85 = 0 dB, 1.0 = +6 dB).
+    """
+    result = get_connection().send_command("set_master_volume", {
+        "volume": volume,
+    })
+    return json.dumps(result)
+
+
+def set_master_pan(pan: float) -> str:
+    """Set the panning of the master track.
+
+    Args:
+        pan: Pan value from -1.0 (full left) to 1.0 (full right). 0.0 is center.
+    """
+    result = get_connection().send_command("set_master_pan", {
+        "pan": pan,
+    })
+    return json.dumps(result)
+
+
+def set_crossfade_assign(track_index: int, assignment: int) -> str:
+    """Set the crossfade assignment of a track.
+
+    Args:
+        track_index: Zero-based index of the track.
+        assignment: 0 = no crossfade assignment, 1 = assign to A, 2 = assign to B.
+    """
+    result = get_connection().send_command("set_crossfade_assign", {
+        "track_index": track_index,
+        "assignment": assignment,
+    })
+    return json.dumps(result)
+
+
 TOOLS = [
     set_track_volume,
     set_track_pan,
@@ -108,4 +155,8 @@ TOOLS = [
     set_track_arm,
     set_track_send,
     get_mixer_state,
+    get_master_mixer_state,
+    set_master_volume,
+    set_master_pan,
+    set_crossfade_assign,
 ]

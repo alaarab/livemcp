@@ -100,6 +100,205 @@ def set_device_parameter(
     return json.dumps(result)
 
 
+def get_master_track_devices() -> str:
+    """Get a list of all devices on the master track.
+
+    Returns device index, name, class_name, type, and is_active for each device.
+    """
+    result = get_connection().send_command("get_master_track_devices", {})
+    return json.dumps(result)
+
+
+def get_return_track_devices(return_index: int) -> str:
+    """Get a list of all devices on a return track.
+
+    Args:
+        return_index: Zero-based index of the return track.
+    """
+    result = get_connection().send_command("get_return_track_devices", {
+        "return_index": return_index,
+    })
+    return json.dumps(result)
+
+
+def get_master_device_parameters(device_index: int) -> str:
+    """Get all parameters of a device on the master track.
+
+    Args:
+        device_index: Zero-based index of the device in the master track's device chain.
+    """
+    result = get_connection().send_command("get_master_device_parameters", {
+        "device_index": device_index,
+    })
+    return json.dumps(result)
+
+
+def get_return_device_parameters(return_index: int, device_index: int) -> str:
+    """Get all parameters of a device on a return track.
+
+    Args:
+        return_index: Zero-based index of the return track.
+        device_index: Zero-based index of the device in the return track's device chain.
+    """
+    result = get_connection().send_command("get_return_device_parameters", {
+        "return_index": return_index,
+        "device_index": device_index,
+    })
+    return json.dumps(result)
+
+
+def get_rack_chains(track_index: int, device_index: int) -> str:
+    """Get all chains in an instrument or effect rack device.
+
+    The device must support chains (i.e. be a rack). Returns chain name, mute, solo, and volume.
+
+    Args:
+        track_index: Zero-based index of the track.
+        device_index: Zero-based index of the rack device.
+    """
+    result = get_connection().send_command("get_rack_chains", {
+        "track_index": track_index,
+        "device_index": device_index,
+    })
+    return json.dumps(result)
+
+
+def get_drum_pads(track_index: int, device_index: int) -> str:
+    """Get all visible drum pads from a drum rack device.
+
+    Returns pad index, name, MIDI note number, mute, and solo state for each pad.
+
+    Args:
+        track_index: Zero-based index of the track.
+        device_index: Zero-based index of the drum rack device.
+    """
+    result = get_connection().send_command("get_drum_pads", {
+        "track_index": track_index,
+        "device_index": device_index,
+    })
+    return json.dumps(result)
+
+
+def delete_device(track_index: int, device_index: int) -> str:
+    """Delete a device from a track's device chain.
+
+    Args:
+        track_index: Zero-based index of the track.
+        device_index: Zero-based index of the device to delete.
+    """
+    result = get_connection().send_command("delete_device", {
+        "track_index": track_index,
+        "device_index": device_index,
+    })
+    return json.dumps(result)
+
+
+def load_device_on_master(uri: str) -> str:
+    """Load a device onto the master track using its browser URI.
+
+    Use get_browser_tree or get_browser_items_at_path to discover available URIs.
+
+    Args:
+        uri: The browser URI of the instrument or effect to load.
+    """
+    result = get_connection().send_command("load_device_on_master", {
+        "uri": uri,
+    })
+    return json.dumps(result)
+
+
+def load_device_on_return(return_index: int, uri: str) -> str:
+    """Load a device onto a return track using its browser URI.
+
+    Use get_browser_tree or get_browser_items_at_path to discover available URIs.
+
+    Args:
+        return_index: Zero-based index of the return track.
+        uri: The browser URI of the instrument or effect to load.
+    """
+    result = get_connection().send_command("load_device_on_return", {
+        "return_index": return_index,
+        "uri": uri,
+    })
+    return json.dumps(result)
+
+
+def set_master_device_parameter(device_index: int, parameter_index: int, value: float) -> str:
+    """Set a parameter value on a device on the master track.
+
+    Use get_master_device_parameters first to discover available parameters and ranges.
+
+    Args:
+        device_index: Zero-based index of the device in the master track's device chain.
+        parameter_index: Zero-based index of the parameter.
+        value: New value for the parameter (must be within the parameter's min/max range).
+    """
+    result = get_connection().send_command("set_master_device_parameter", {
+        "device_index": device_index,
+        "parameter_index": parameter_index,
+        "value": value,
+    })
+    return json.dumps(result)
+
+
+def set_return_device_parameter(
+    return_index: int, device_index: int, parameter_index: int, value: float
+) -> str:
+    """Set a parameter value on a device on a return track.
+
+    Use get_return_device_parameters first to discover available parameters and ranges.
+
+    Args:
+        return_index: Zero-based index of the return track.
+        device_index: Zero-based index of the device in the return track's device chain.
+        parameter_index: Zero-based index of the parameter.
+        value: New value for the parameter (must be within the parameter's min/max range).
+    """
+    result = get_connection().send_command("set_return_device_parameter", {
+        "return_index": return_index,
+        "device_index": device_index,
+        "parameter_index": parameter_index,
+        "value": value,
+    })
+    return json.dumps(result)
+
+
+def set_drum_pad_mute(track_index: int, device_index: int, pad_index: int, mute: bool) -> str:
+    """Mute or unmute a specific drum pad in a drum rack.
+
+    Args:
+        track_index: Zero-based index of the track.
+        device_index: Zero-based index of the drum rack device.
+        pad_index: MIDI note number of the drum pad (0-127).
+        mute: True to mute the pad, False to unmute.
+    """
+    result = get_connection().send_command("set_drum_pad_mute", {
+        "track_index": track_index,
+        "device_index": device_index,
+        "pad_index": pad_index,
+        "mute": mute,
+    })
+    return json.dumps(result)
+
+
+def set_drum_pad_solo(track_index: int, device_index: int, pad_index: int, solo: bool) -> str:
+    """Solo or unsolo a specific drum pad in a drum rack.
+
+    Args:
+        track_index: Zero-based index of the track.
+        device_index: Zero-based index of the drum rack device.
+        pad_index: MIDI note number of the drum pad (0-127).
+        solo: True to solo the pad, False to unsolo.
+    """
+    result = get_connection().send_command("set_drum_pad_solo", {
+        "track_index": track_index,
+        "device_index": device_index,
+        "pad_index": pad_index,
+        "solo": solo,
+    })
+    return json.dumps(result)
+
+
 TOOLS = [
     get_browser_tree,
     get_browser_items_at_path,
@@ -107,4 +306,17 @@ TOOLS = [
     load_drum_kit,
     get_device_parameters,
     set_device_parameter,
+    get_master_track_devices,
+    get_return_track_devices,
+    get_master_device_parameters,
+    get_return_device_parameters,
+    get_rack_chains,
+    get_drum_pads,
+    delete_device,
+    load_device_on_master,
+    load_device_on_return,
+    set_master_device_parameter,
+    set_return_device_parameter,
+    set_drum_pad_mute,
+    set_drum_pad_solo,
 ]

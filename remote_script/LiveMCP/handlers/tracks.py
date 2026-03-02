@@ -148,9 +148,328 @@ def delete_track(control_surface, params):
     return {"deleted_track_index": track_index}
 
 
+def get_track_routing(control_surface, params):
+    """Return routing info for a specific track."""
+    track_index = params.get("track_index")
+    if track_index is None:
+        raise ValueError("Missing required parameter: track_index")
+    track_index = int(track_index)
+    song = control_surface.song()
+
+    if track_index < 0 or track_index >= len(song.tracks):
+        raise ValueError("Track index {0} out of range (0-{1})".format(
+            track_index, len(song.tracks) - 1))
+
+    track = song.tracks[track_index]
+
+    available_input_types = [t.display_name for t in track.available_input_routing_types]
+    available_output_types = [t.display_name for t in track.available_output_routing_types]
+
+    return {
+        "track_index": track_index,
+        "input_routing_type": track.input_routing_type.display_name,
+        "input_routing_channel": track.input_routing_channel.display_name,
+        "output_routing_type": track.output_routing_type.display_name,
+        "output_routing_channel": track.output_routing_channel.display_name,
+        "available_input_routing_types": available_input_types,
+        "available_output_routing_types": available_output_types,
+    }
+
+
+def get_group_info(control_surface, params):
+    """Return group/fold info for a specific track."""
+    track_index = params.get("track_index")
+    if track_index is None:
+        raise ValueError("Missing required parameter: track_index")
+    track_index = int(track_index)
+    song = control_surface.song()
+
+    if track_index < 0 or track_index >= len(song.tracks):
+        raise ValueError("Track index {0} out of range (0-{1})".format(
+            track_index, len(song.tracks) - 1))
+
+    track = song.tracks[track_index]
+    is_foldable = track.is_foldable
+    is_grouped = track.is_grouped
+
+    result = {
+        "track_index": track_index,
+        "is_foldable": is_foldable,
+        "is_grouped": is_grouped,
+        "fold_state": track.fold_state if is_foldable else None,
+    }
+
+    if is_grouped:
+        result["group_track_name"] = track.group_track.name
+
+    return result
+
+
+def duplicate_track(control_surface, params):
+    """Duplicate a track by index."""
+    track_index = params.get("track_index")
+    if track_index is None:
+        raise ValueError("Missing required parameter: track_index")
+    track_index = int(track_index)
+    song = control_surface.song()
+
+    if track_index < 0 or track_index >= len(song.tracks):
+        raise ValueError("Track index {0} out of range (0-{1})".format(
+            track_index, len(song.tracks) - 1))
+
+    song.duplicate_track(track_index)
+    return {"duplicated_track_index": track_index}
+
+
+def duplicate_scene(control_surface, params):
+    """Duplicate a scene by index."""
+    scene_index = params.get("scene_index")
+    if scene_index is None:
+        raise ValueError("Missing required parameter: scene_index")
+    scene_index = int(scene_index)
+    song = control_surface.song()
+
+    if scene_index < 0 or scene_index >= len(song.scenes):
+        raise ValueError("Scene index {0} out of range (0-{1})".format(
+            scene_index, len(song.scenes) - 1))
+
+    song.duplicate_scene(scene_index)
+    return {"duplicated_scene_index": scene_index}
+
+
+def delete_scene(control_surface, params):
+    """Delete a scene by index."""
+    scene_index = params.get("scene_index")
+    if scene_index is None:
+        raise ValueError("Missing required parameter: scene_index")
+    scene_index = int(scene_index)
+    song = control_surface.song()
+
+    if scene_index < 0 or scene_index >= len(song.scenes):
+        raise ValueError("Scene index {0} out of range (0-{1})".format(
+            scene_index, len(song.scenes) - 1))
+
+    song.delete_scene(scene_index)
+    return {"deleted_scene_index": scene_index}
+
+
+def set_track_color(control_surface, params):
+    """Set the color index of a track."""
+    track_index = params.get("track_index")
+    color_index = params.get("color_index")
+    if track_index is None:
+        raise ValueError("Missing required parameter: track_index")
+    if color_index is None:
+        raise ValueError("Missing required parameter: color_index")
+    track_index = int(track_index)
+    song = control_surface.song()
+
+    if track_index < 0 or track_index >= len(song.tracks):
+        raise ValueError("Track index {0} out of range (0-{1})".format(
+            track_index, len(song.tracks) - 1))
+
+    song.tracks[track_index].color_index = int(color_index)
+    return {"track_index": track_index, "color_index": int(color_index)}
+
+
+def set_scene_name(control_surface, params):
+    """Set the name of a scene."""
+    scene_index = params.get("scene_index")
+    name = params.get("name")
+    if scene_index is None:
+        raise ValueError("Missing required parameter: scene_index")
+    if name is None:
+        raise ValueError("Missing required parameter: name")
+    scene_index = int(scene_index)
+    song = control_surface.song()
+
+    if scene_index < 0 or scene_index >= len(song.scenes):
+        raise ValueError("Scene index {0} out of range (0-{1})".format(
+            scene_index, len(song.scenes) - 1))
+
+    song.scenes[scene_index].name = str(name)
+    return {"scene_index": scene_index, "name": str(name)}
+
+
+def set_scene_color(control_surface, params):
+    """Set the color index of a scene."""
+    scene_index = params.get("scene_index")
+    color_index = params.get("color_index")
+    if scene_index is None:
+        raise ValueError("Missing required parameter: scene_index")
+    if color_index is None:
+        raise ValueError("Missing required parameter: color_index")
+    scene_index = int(scene_index)
+    song = control_surface.song()
+
+    if scene_index < 0 or scene_index >= len(song.scenes):
+        raise ValueError("Scene index {0} out of range (0-{1})".format(
+            scene_index, len(song.scenes) - 1))
+
+    song.scenes[scene_index].color_index = int(color_index)
+    return {"scene_index": scene_index, "color_index": int(color_index)}
+
+
+def create_return_track(control_surface, params):
+    """Create a new return track."""
+    song = control_surface.song()
+    song.create_return_track()
+    return {"return_track_count": len(song.return_tracks)}
+
+
+def delete_return_track(control_surface, params):
+    """Delete a return track by index."""
+    return_index = params.get("return_index")
+    if return_index is None:
+        raise ValueError("Missing required parameter: return_index")
+    return_index = int(return_index)
+    song = control_surface.song()
+
+    if return_index < 0 or return_index >= len(song.return_tracks):
+        raise ValueError("Return track index {0} out of range (0-{1})".format(
+            return_index, len(song.return_tracks) - 1))
+
+    song.delete_return_track(return_index)
+    return {"deleted_return_index": return_index}
+
+
+def set_track_monitoring(control_surface, params):
+    """Set the monitoring state of a track (0=In, 1=Auto, 2=Off)."""
+    track_index = params.get("track_index")
+    state = params.get("state")
+    if track_index is None:
+        raise ValueError("Missing required parameter: track_index")
+    if state is None:
+        raise ValueError("Missing required parameter: state")
+    track_index = int(track_index)
+    song = control_surface.song()
+
+    if track_index < 0 or track_index >= len(song.tracks):
+        raise ValueError("Track index {0} out of range (0-{1})".format(
+            track_index, len(song.tracks) - 1))
+
+    song.tracks[track_index].current_monitoring_state = int(state)
+    return {"track_index": track_index, "monitoring_state": int(state)}
+
+
+def set_track_input_routing(control_surface, params):
+    """Set the input routing type and optionally channel for a track."""
+    track_index = params.get("track_index")
+    routing_type_name = params.get("routing_type_name")
+    routing_channel_name = params.get("routing_channel_name")
+    if track_index is None:
+        raise ValueError("Missing required parameter: track_index")
+    if routing_type_name is None:
+        raise ValueError("Missing required parameter: routing_type_name")
+    track_index = int(track_index)
+    song = control_surface.song()
+
+    if track_index < 0 or track_index >= len(song.tracks):
+        raise ValueError("Track index {0} out of range (0-{1})".format(
+            track_index, len(song.tracks) - 1))
+
+    track = song.tracks[track_index]
+
+    matched_type = None
+    for rt in track.available_input_routing_types:
+        if rt.display_name == routing_type_name:
+            matched_type = rt
+            break
+    if matched_type is None:
+        raise ValueError("Input routing type '{0}' not found".format(routing_type_name))
+
+    track.input_routing_type = matched_type
+
+    if routing_channel_name is not None:
+        matched_channel = None
+        for ch in track.available_input_routing_channels:
+            if ch.display_name == routing_channel_name:
+                matched_channel = ch
+                break
+        if matched_channel is None:
+            raise ValueError("Input routing channel '{0}' not found".format(routing_channel_name))
+        track.input_routing_channel = matched_channel
+
+    return {
+        "track_index": track_index,
+        "input_routing_type": track.input_routing_type.display_name,
+        "input_routing_channel": track.input_routing_channel.display_name,
+    }
+
+
+def set_track_output_routing(control_surface, params):
+    """Set the output routing type and optionally channel for a track."""
+    track_index = params.get("track_index")
+    routing_type_name = params.get("routing_type_name")
+    routing_channel_name = params.get("routing_channel_name")
+    if track_index is None:
+        raise ValueError("Missing required parameter: track_index")
+    if routing_type_name is None:
+        raise ValueError("Missing required parameter: routing_type_name")
+    track_index = int(track_index)
+    song = control_surface.song()
+
+    if track_index < 0 or track_index >= len(song.tracks):
+        raise ValueError("Track index {0} out of range (0-{1})".format(
+            track_index, len(song.tracks) - 1))
+
+    track = song.tracks[track_index]
+
+    matched_type = None
+    for rt in track.available_output_routing_types:
+        if rt.display_name == routing_type_name:
+            matched_type = rt
+            break
+    if matched_type is None:
+        raise ValueError("Output routing type '{0}' not found".format(routing_type_name))
+
+    track.output_routing_type = matched_type
+
+    if routing_channel_name is not None:
+        matched_channel = None
+        for ch in track.available_output_routing_channels:
+            if ch.display_name == routing_channel_name:
+                matched_channel = ch
+                break
+        if matched_channel is None:
+            raise ValueError("Output routing channel '{0}' not found".format(routing_channel_name))
+        track.output_routing_channel = matched_channel
+
+    return {
+        "track_index": track_index,
+        "output_routing_type": track.output_routing_type.display_name,
+        "output_routing_channel": track.output_routing_channel.display_name,
+    }
+
+
+def fold_track(control_surface, params):
+    """Fold or unfold a group track."""
+    track_index = params.get("track_index")
+    fold = params.get("fold")
+    if track_index is None:
+        raise ValueError("Missing required parameter: track_index")
+    if fold is None:
+        raise ValueError("Missing required parameter: fold")
+    track_index = int(track_index)
+    song = control_surface.song()
+
+    if track_index < 0 or track_index >= len(song.tracks):
+        raise ValueError("Track index {0} out of range (0-{1})".format(
+            track_index, len(song.tracks) - 1))
+
+    track = song.tracks[track_index]
+    if not track.is_foldable:
+        raise ValueError("Track {0} is not a group track and cannot be folded".format(track_index))
+
+    track.fold_state = int(fold)
+    return {"track_index": track_index, "fold_state": int(fold)}
+
+
 READ_HANDLERS = {
     "get_track_info": get_track_info,
     "get_return_tracks": get_return_tracks,
+    "get_track_routing": get_track_routing,
+    "get_group_info": get_group_info,
 }
 
 WRITE_HANDLERS = {
@@ -158,4 +477,16 @@ WRITE_HANDLERS = {
     "create_audio_track": create_audio_track,
     "set_track_name": set_track_name,
     "delete_track": delete_track,
+    "duplicate_track": duplicate_track,
+    "duplicate_scene": duplicate_scene,
+    "delete_scene": delete_scene,
+    "set_track_color": set_track_color,
+    "set_scene_name": set_scene_name,
+    "set_scene_color": set_scene_color,
+    "create_return_track": create_return_track,
+    "delete_return_track": delete_return_track,
+    "set_track_monitoring": set_track_monitoring,
+    "set_track_input_routing": set_track_input_routing,
+    "set_track_output_routing": set_track_output_routing,
+    "fold_track": fold_track,
 }

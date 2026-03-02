@@ -144,6 +144,265 @@ def get_scene_info(scene_index: int) -> str:
     return json.dumps(result)
 
 
+def remove_notes_from_clip(
+    track_index: int,
+    clip_index: int,
+    from_pitch: int = 0,
+    pitch_span: int = 128,
+    from_time: float = 0.0,
+    time_span: float = None,
+) -> str:
+    """Remove MIDI notes from a clip within a pitch and time range.
+
+    Args:
+        track_index: Zero-based index of the track.
+        clip_index: Zero-based index of the clip slot.
+        from_pitch: Starting pitch (0-127, default 0).
+        pitch_span: Number of pitches to span (default 128 = all).
+        from_time: Start time in beats (default 0.0).
+        time_span: Time span in beats. If None, uses clip length.
+    """
+    params = {
+        "track_index": track_index,
+        "clip_index": clip_index,
+        "from_pitch": from_pitch,
+        "pitch_span": pitch_span,
+        "from_time": from_time,
+    }
+    if time_span is not None:
+        params["time_span"] = time_span
+    result = get_connection().send_command("remove_notes_from_clip", params)
+    return json.dumps(result)
+
+
+def clear_clip_notes(track_index: int, clip_index: int) -> str:
+    """Remove all MIDI notes from a clip.
+
+    Args:
+        track_index: Zero-based index of the track.
+        clip_index: Zero-based index of the clip slot.
+    """
+    result = get_connection().send_command("clear_clip_notes", {
+        "track_index": track_index,
+        "clip_index": clip_index,
+    })
+    return json.dumps(result)
+
+
+def set_clip_loop(
+    track_index: int,
+    clip_index: int,
+    looping: bool = None,
+    loop_start: float = None,
+    loop_end: float = None,
+    start_marker: float = None,
+    end_marker: float = None,
+) -> str:
+    """Set clip loop and marker properties.
+
+    All loop parameters are optional; only provided values are changed.
+
+    Args:
+        track_index: Zero-based index of the track.
+        clip_index: Zero-based index of the clip slot.
+        looping: Enable or disable looping.
+        loop_start: Loop start position in beats.
+        loop_end: Loop end position in beats.
+        start_marker: Start marker position in beats.
+        end_marker: End marker position in beats.
+    """
+    params = {
+        "track_index": track_index,
+        "clip_index": clip_index,
+    }
+    if looping is not None:
+        params["looping"] = looping
+    if loop_start is not None:
+        params["loop_start"] = loop_start
+    if loop_end is not None:
+        params["loop_end"] = loop_end
+    if start_marker is not None:
+        params["start_marker"] = start_marker
+    if end_marker is not None:
+        params["end_marker"] = end_marker
+    result = get_connection().send_command("set_clip_loop", params)
+    return json.dumps(result)
+
+
+def duplicate_clip(
+    track_index: int,
+    clip_index: int,
+    target_track_index: int,
+    target_clip_index: int,
+) -> str:
+    """Duplicate a clip to another clip slot.
+
+    Args:
+        track_index: Zero-based index of the source track.
+        clip_index: Zero-based index of the source clip slot.
+        target_track_index: Zero-based index of the destination track.
+        target_clip_index: Zero-based index of the destination clip slot.
+    """
+    result = get_connection().send_command("duplicate_clip", {
+        "track_index": track_index,
+        "clip_index": clip_index,
+        "target_track_index": target_track_index,
+        "target_clip_index": target_clip_index,
+    })
+    return json.dumps(result)
+
+
+def set_clip_color(track_index: int, clip_index: int, color_index: int) -> str:
+    """Set the color of a clip.
+
+    Args:
+        track_index: Zero-based index of the track.
+        clip_index: Zero-based index of the clip slot.
+        color_index: Ableton color index to set.
+    """
+    result = get_connection().send_command("set_clip_color", {
+        "track_index": track_index,
+        "clip_index": clip_index,
+        "color_index": color_index,
+    })
+    return json.dumps(result)
+
+
+def quantize_clip(
+    track_index: int, clip_index: int, grid: float, amount: float = 1.0
+) -> str:
+    """Quantize notes in a clip to a grid.
+
+    Args:
+        track_index: Zero-based index of the track.
+        clip_index: Zero-based index of the clip slot.
+        grid: Grid size in beats (0.25 = 16th notes, 0.5 = 8th, 1.0 = quarter).
+        amount: Quantize strength from 0.0 to 1.0 (default 1.0 = full quantize).
+    """
+    result = get_connection().send_command("quantize_clip", {
+        "track_index": track_index,
+        "clip_index": clip_index,
+        "grid": grid,
+        "amount": amount,
+    })
+    return json.dumps(result)
+
+
+def duplicate_clip_loop(track_index: int, clip_index: int) -> str:
+    """Duplicate the loop content of a clip, doubling its length.
+
+    Args:
+        track_index: Zero-based index of the track.
+        clip_index: Zero-based index of the clip slot.
+    """
+    result = get_connection().send_command("duplicate_clip_loop", {
+        "track_index": track_index,
+        "clip_index": clip_index,
+    })
+    return json.dumps(result)
+
+
+def crop_clip(track_index: int, clip_index: int) -> str:
+    """Crop a clip to its loop boundaries.
+
+    Args:
+        track_index: Zero-based index of the track.
+        clip_index: Zero-based index of the clip slot.
+    """
+    result = get_connection().send_command("crop_clip", {
+        "track_index": track_index,
+        "clip_index": clip_index,
+    })
+    return json.dumps(result)
+
+
+def set_clip_muted(track_index: int, clip_index: int, muted: bool) -> str:
+    """Set whether a clip is muted (deactivated).
+
+    Args:
+        track_index: Zero-based index of the track.
+        clip_index: Zero-based index of the clip slot.
+        muted: True to mute, False to unmute.
+    """
+    result = get_connection().send_command("set_clip_muted", {
+        "track_index": track_index,
+        "clip_index": clip_index,
+        "muted": muted,
+    })
+    return json.dumps(result)
+
+
+def set_clip_gain(track_index: int, clip_index: int, gain: float) -> str:
+    """Set the gain of an audio clip.
+
+    Args:
+        track_index: Zero-based index of the track.
+        clip_index: Zero-based index of the clip slot.
+        gain: Gain value to set.
+    """
+    result = get_connection().send_command("set_clip_gain", {
+        "track_index": track_index,
+        "clip_index": clip_index,
+        "gain": gain,
+    })
+    return json.dumps(result)
+
+
+def set_clip_pitch(
+    track_index: int, clip_index: int, coarse: int = None, fine: float = None
+) -> str:
+    """Set the pitch transposition of an audio clip.
+
+    Args:
+        track_index: Zero-based index of the track.
+        clip_index: Zero-based index of the clip slot.
+        coarse: Coarse pitch in semitones (-48 to 48).
+        fine: Fine pitch in cents (-50.0 to 50.0).
+    """
+    params = {
+        "track_index": track_index,
+        "clip_index": clip_index,
+    }
+    if coarse is not None:
+        params["coarse"] = coarse
+    if fine is not None:
+        params["fine"] = fine
+    result = get_connection().send_command("set_clip_pitch", params)
+    return json.dumps(result)
+
+
+def set_clip_launch_mode(track_index: int, clip_index: int, mode: int) -> str:
+    """Set the launch mode of a clip.
+
+    Args:
+        track_index: Zero-based index of the track.
+        clip_index: Zero-based index of the clip slot.
+        mode: Launch mode (0=Trigger, 1=Gate, 2=Toggle, 3=Repeat).
+    """
+    result = get_connection().send_command("set_clip_launch_mode", {
+        "track_index": track_index,
+        "clip_index": clip_index,
+        "mode": mode,
+    })
+    return json.dumps(result)
+
+
+def set_clip_warp_mode(track_index: int, clip_index: int, warp_mode: int) -> str:
+    """Set the warp mode of an audio clip.
+
+    Args:
+        track_index: Zero-based index of the track.
+        clip_index: Zero-based index of the clip slot.
+        warp_mode: Warp mode index to set.
+    """
+    result = get_connection().send_command("set_clip_warp_mode", {
+        "track_index": track_index,
+        "clip_index": clip_index,
+        "warp_mode": warp_mode,
+    })
+    return json.dumps(result)
+
+
 TOOLS = [
     create_clip,
     set_clip_name,
@@ -155,4 +414,17 @@ TOOLS = [
     fire_scene,
     create_scene,
     get_scene_info,
+    remove_notes_from_clip,
+    clear_clip_notes,
+    set_clip_loop,
+    duplicate_clip,
+    set_clip_color,
+    quantize_clip,
+    duplicate_clip_loop,
+    crop_clip,
+    set_clip_muted,
+    set_clip_gain,
+    set_clip_pitch,
+    set_clip_launch_mode,
+    set_clip_warp_mode,
 ]

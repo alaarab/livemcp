@@ -233,6 +233,310 @@ def get_scene_info(control_surface, params):
     }
 
 
+def remove_notes_from_clip(control_surface, params):
+    """Remove MIDI notes from a clip within a pitch/time range."""
+    song = control_surface.song()
+    track, slot, clip = _get_track_and_clip(song, params)
+
+    if clip is None:
+        raise ValueError("No clip in track {0}, slot {1}".format(
+            params["track_index"], params["clip_index"]))
+
+    from_pitch = int(params.get("from_pitch", 0))
+    pitch_span = int(params.get("pitch_span", 128))
+    from_time = float(params.get("from_time", 0.0))
+    time_span = params.get("time_span")
+    if time_span is None:
+        time_span = clip.length
+    else:
+        time_span = float(time_span)
+
+    clip.remove_notes_extended(from_pitch, pitch_span, from_time, time_span)
+    return {
+        "track_index": int(params["track_index"]),
+        "clip_index": int(params["clip_index"]),
+        "from_pitch": from_pitch,
+        "pitch_span": pitch_span,
+        "from_time": from_time,
+        "time_span": time_span,
+    }
+
+
+def clear_clip_notes(control_surface, params):
+    """Remove all MIDI notes from a clip."""
+    song = control_surface.song()
+    track, slot, clip = _get_track_and_clip(song, params)
+
+    if clip is None:
+        raise ValueError("No clip in track {0}, slot {1}".format(
+            params["track_index"], params["clip_index"]))
+
+    clip.remove_notes_extended(0, 128, 0.0, clip.length)
+    return {
+        "track_index": int(params["track_index"]),
+        "clip_index": int(params["clip_index"]),
+        "cleared": True,
+    }
+
+
+def set_clip_loop(control_surface, params):
+    """Set clip loop properties."""
+    song = control_surface.song()
+    track, slot, clip = _get_track_and_clip(song, params)
+
+    if clip is None:
+        raise ValueError("No clip in track {0}, slot {1}".format(
+            params["track_index"], params["clip_index"]))
+
+    result = {
+        "track_index": int(params["track_index"]),
+        "clip_index": int(params["clip_index"]),
+    }
+
+    if "looping" in params:
+        clip.looping = bool(params["looping"])
+        result["looping"] = clip.looping
+    if "loop_start" in params:
+        clip.loop_start = float(params["loop_start"])
+        result["loop_start"] = clip.loop_start
+    if "loop_end" in params:
+        clip.loop_end = float(params["loop_end"])
+        result["loop_end"] = clip.loop_end
+    if "start_marker" in params:
+        clip.start_marker = float(params["start_marker"])
+        result["start_marker"] = clip.start_marker
+    if "end_marker" in params:
+        clip.end_marker = float(params["end_marker"])
+        result["end_marker"] = clip.end_marker
+
+    return result
+
+
+def duplicate_clip(control_surface, params):
+    """Duplicate a clip to a target clip slot."""
+    song = control_surface.song()
+    track, slot, clip = _get_track_and_clip(song, params)
+
+    if clip is None:
+        raise ValueError("No clip in track {0}, slot {1}".format(
+            params["track_index"], params["clip_index"]))
+
+    target_track_index = params.get("target_track_index")
+    target_clip_index = params.get("target_clip_index")
+    if target_track_index is None:
+        raise ValueError("Missing required parameter: target_track_index")
+    if target_clip_index is None:
+        raise ValueError("Missing required parameter: target_clip_index")
+    target_track_index = int(target_track_index)
+    target_clip_index = int(target_clip_index)
+
+    if target_track_index < 0 or target_track_index >= len(song.tracks):
+        raise ValueError("Target track index {0} out of range (0-{1})".format(
+            target_track_index, len(song.tracks) - 1))
+
+    target_track = song.tracks[target_track_index]
+    if target_clip_index < 0 or target_clip_index >= len(target_track.clip_slots):
+        raise ValueError("Target clip index {0} out of range (0-{1})".format(
+            target_clip_index, len(target_track.clip_slots) - 1))
+
+    target_slot = target_track.clip_slots[target_clip_index]
+    slot.duplicate_clip_to(target_slot)
+    return {
+        "track_index": int(params["track_index"]),
+        "clip_index": int(params["clip_index"]),
+        "target_track_index": target_track_index,
+        "target_clip_index": target_clip_index,
+        "duplicated": True,
+    }
+
+
+def set_clip_color(control_surface, params):
+    """Set the color of a clip."""
+    song = control_surface.song()
+    track, slot, clip = _get_track_and_clip(song, params)
+
+    if clip is None:
+        raise ValueError("No clip in track {0}, slot {1}".format(
+            params["track_index"], params["clip_index"]))
+
+    color_index = params.get("color_index")
+    if color_index is None:
+        raise ValueError("Missing required parameter: color_index")
+
+    clip.color_index = int(color_index)
+    return {
+        "track_index": int(params["track_index"]),
+        "clip_index": int(params["clip_index"]),
+        "color_index": int(color_index),
+    }
+
+
+def quantize_clip(control_surface, params):
+    """Quantize notes in a clip to a grid."""
+    song = control_surface.song()
+    track, slot, clip = _get_track_and_clip(song, params)
+
+    if clip is None:
+        raise ValueError("No clip in track {0}, slot {1}".format(
+            params["track_index"], params["clip_index"]))
+
+    grid = params.get("grid")
+    if grid is None:
+        raise ValueError("Missing required parameter: grid")
+    grid = float(grid)
+    amount = float(params.get("amount", 1.0))
+
+    clip.quantize(grid, amount)
+    return {
+        "track_index": int(params["track_index"]),
+        "clip_index": int(params["clip_index"]),
+        "grid": grid,
+        "amount": amount,
+    }
+
+
+def duplicate_clip_loop(control_surface, params):
+    """Duplicate the loop content of a clip, doubling its length."""
+    song = control_surface.song()
+    track, slot, clip = _get_track_and_clip(song, params)
+
+    if clip is None:
+        raise ValueError("No clip in track {0}, slot {1}".format(
+            params["track_index"], params["clip_index"]))
+
+    clip.duplicate_loop()
+    return {
+        "track_index": int(params["track_index"]),
+        "clip_index": int(params["clip_index"]),
+        "duplicated_loop": True,
+    }
+
+
+def crop_clip(control_surface, params):
+    """Crop a clip to its loop boundaries."""
+    song = control_surface.song()
+    track, slot, clip = _get_track_and_clip(song, params)
+
+    if clip is None:
+        raise ValueError("No clip in track {0}, slot {1}".format(
+            params["track_index"], params["clip_index"]))
+
+    clip.crop()
+    return {
+        "track_index": int(params["track_index"]),
+        "clip_index": int(params["clip_index"]),
+        "cropped": True,
+    }
+
+
+def set_clip_muted(control_surface, params):
+    """Set whether a clip is muted (deactivated)."""
+    song = control_surface.song()
+    track, slot, clip = _get_track_and_clip(song, params)
+
+    if clip is None:
+        raise ValueError("No clip in track {0}, slot {1}".format(
+            params["track_index"], params["clip_index"]))
+
+    muted = params.get("muted")
+    if muted is None:
+        raise ValueError("Missing required parameter: muted")
+
+    clip.muted = bool(muted)
+    return {
+        "track_index": int(params["track_index"]),
+        "clip_index": int(params["clip_index"]),
+        "muted": clip.muted,
+    }
+
+
+def set_clip_gain(control_surface, params):
+    """Set the gain of an audio clip."""
+    song = control_surface.song()
+    track, slot, clip = _get_track_and_clip(song, params)
+
+    if clip is None:
+        raise ValueError("No clip in track {0}, slot {1}".format(
+            params["track_index"], params["clip_index"]))
+
+    gain = params.get("gain")
+    if gain is None:
+        raise ValueError("Missing required parameter: gain")
+
+    clip.gain = float(gain)
+    return {
+        "track_index": int(params["track_index"]),
+        "clip_index": int(params["clip_index"]),
+        "gain": float(gain),
+    }
+
+
+def set_clip_pitch(control_surface, params):
+    """Set the pitch transposition of an audio clip."""
+    song = control_surface.song()
+    track, slot, clip = _get_track_and_clip(song, params)
+
+    if clip is None:
+        raise ValueError("No clip in track {0}, slot {1}".format(
+            params["track_index"], params["clip_index"]))
+
+    result = {
+        "track_index": int(params["track_index"]),
+        "clip_index": int(params["clip_index"]),
+    }
+
+    if "coarse" in params:
+        clip.pitch_coarse = int(params["coarse"])
+        result["pitch_coarse"] = clip.pitch_coarse
+    if "fine" in params:
+        clip.pitch_fine = float(params["fine"])
+        result["pitch_fine"] = clip.pitch_fine
+
+    return result
+
+
+def set_clip_launch_mode(control_surface, params):
+    """Set the launch mode of a clip."""
+    song = control_surface.song()
+    track, slot, clip = _get_track_and_clip(song, params)
+
+    if clip is None:
+        raise ValueError("No clip in track {0}, slot {1}".format(
+            params["track_index"], params["clip_index"]))
+
+    mode = params.get("mode")
+    if mode is None:
+        raise ValueError("Missing required parameter: mode")
+
+    clip.launch_mode = int(mode)
+    return {
+        "track_index": int(params["track_index"]),
+        "clip_index": int(params["clip_index"]),
+        "launch_mode": int(mode),
+    }
+
+
+def set_clip_warp_mode(control_surface, params):
+    """Set the warp mode of an audio clip."""
+    song = control_surface.song()
+    track, slot, clip = _get_track_and_clip(song, params)
+
+    if clip is None:
+        raise ValueError("No clip in track {0}, slot {1}".format(
+            params["track_index"], params["clip_index"]))
+
+    warp_mode = params.get("warp_mode")
+    if warp_mode is None:
+        raise ValueError("Missing required parameter: warp_mode")
+
+    clip.warp_mode = int(warp_mode)
+    return {
+        "track_index": int(params["track_index"]),
+        "clip_index": int(params["clip_index"]),
+        "warp_mode": int(warp_mode),
+    }
+
+
 READ_HANDLERS = {
     "get_notes_from_clip": get_notes_from_clip,
     "get_scene_info": get_scene_info,
@@ -247,4 +551,17 @@ WRITE_HANDLERS = {
     "stop_clip": stop_clip,
     "fire_scene": fire_scene,
     "create_scene": create_scene,
+    "remove_notes_from_clip": remove_notes_from_clip,
+    "clear_clip_notes": clear_clip_notes,
+    "set_clip_loop": set_clip_loop,
+    "duplicate_clip": duplicate_clip,
+    "set_clip_color": set_clip_color,
+    "quantize_clip": quantize_clip,
+    "duplicate_clip_loop": duplicate_clip_loop,
+    "crop_clip": crop_clip,
+    "set_clip_muted": set_clip_muted,
+    "set_clip_gain": set_clip_gain,
+    "set_clip_pitch": set_clip_pitch,
+    "set_clip_launch_mode": set_clip_launch_mode,
+    "set_clip_warp_mode": set_clip_warp_mode,
 }

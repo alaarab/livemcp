@@ -71,6 +71,182 @@ def get_return_tracks() -> str:
     return json.dumps(result)
 
 
+def get_track_routing(track_index: int) -> str:
+    """Get the input and output routing configuration for a track.
+
+    Returns input/output routing type and channel display names, plus lists
+    of all available input and output routing types.
+
+    Args:
+        track_index: Zero-based index of the track.
+    """
+    result = get_connection().send_command("get_track_routing", {"track_index": track_index})
+    return json.dumps(result)
+
+
+def get_group_info(track_index: int) -> str:
+    """Get group and fold information for a track.
+
+    Returns whether the track is foldable, whether it belongs to a group,
+    its current fold state, and the group track name if grouped.
+
+    Args:
+        track_index: Zero-based index of the track.
+    """
+    result = get_connection().send_command("get_group_info", {"track_index": track_index})
+    return json.dumps(result)
+
+
+def duplicate_track(track_index: int) -> str:
+    """Duplicate a track.
+
+    Args:
+        track_index: Zero-based index of the track to duplicate.
+    """
+    result = get_connection().send_command("duplicate_track", {"track_index": track_index})
+    return json.dumps(result)
+
+
+def duplicate_scene(scene_index: int) -> str:
+    """Duplicate a scene.
+
+    Args:
+        scene_index: Zero-based index of the scene to duplicate.
+    """
+    result = get_connection().send_command("duplicate_scene", {"scene_index": scene_index})
+    return json.dumps(result)
+
+
+def delete_scene(scene_index: int) -> str:
+    """Delete a scene from the session.
+
+    Args:
+        scene_index: Zero-based index of the scene to delete.
+    """
+    result = get_connection().send_command("delete_scene", {"scene_index": scene_index})
+    return json.dumps(result)
+
+
+def set_track_color(track_index: int, color_index: int) -> str:
+    """Set the color of a track by color index.
+
+    Args:
+        track_index: Zero-based index of the track.
+        color_index: Ableton color palette index.
+    """
+    result = get_connection().send_command("set_track_color", {
+        "track_index": track_index,
+        "color_index": color_index,
+    })
+    return json.dumps(result)
+
+
+def set_scene_name(scene_index: int, name: str) -> str:
+    """Set the name of a scene.
+
+    Args:
+        scene_index: Zero-based index of the scene.
+        name: New name for the scene.
+    """
+    result = get_connection().send_command("set_scene_name", {
+        "scene_index": scene_index,
+        "name": name,
+    })
+    return json.dumps(result)
+
+
+def set_scene_color(scene_index: int, color_index: int) -> str:
+    """Set the color of a scene by color index.
+
+    Args:
+        scene_index: Zero-based index of the scene.
+        color_index: Ableton color palette index.
+    """
+    result = get_connection().send_command("set_scene_color", {
+        "scene_index": scene_index,
+        "color_index": color_index,
+    })
+    return json.dumps(result)
+
+
+def create_return_track() -> str:
+    """Create a new return track in the session."""
+    result = get_connection().send_command("create_return_track", {})
+    return json.dumps(result)
+
+
+def delete_return_track(return_index: int) -> str:
+    """Delete a return track from the session.
+
+    Args:
+        return_index: Zero-based index of the return track to delete.
+    """
+    result = get_connection().send_command("delete_return_track", {"return_index": return_index})
+    return json.dumps(result)
+
+
+def set_track_monitoring(track_index: int, state: int) -> str:
+    """Set the monitoring state of a track.
+
+    Args:
+        track_index: Zero-based index of the track.
+        state: Monitoring state (0=In, 1=Auto, 2=Off).
+    """
+    result = get_connection().send_command("set_track_monitoring", {
+        "track_index": track_index,
+        "state": state,
+    })
+    return json.dumps(result)
+
+
+def set_track_input_routing(track_index: int, routing_type_name: str, routing_channel_name: str = None) -> str:
+    """Set the input routing for a track.
+
+    Use get_track_routing to see available routing type names.
+
+    Args:
+        track_index: Zero-based index of the track.
+        routing_type_name: Display name of the desired input routing type.
+        routing_channel_name: Display name of the desired input routing channel (optional).
+    """
+    params = {"track_index": track_index, "routing_type_name": routing_type_name}
+    if routing_channel_name is not None:
+        params["routing_channel_name"] = routing_channel_name
+    result = get_connection().send_command("set_track_input_routing", params)
+    return json.dumps(result)
+
+
+def set_track_output_routing(track_index: int, routing_type_name: str, routing_channel_name: str = None) -> str:
+    """Set the output routing for a track.
+
+    Use get_track_routing to see available routing type names.
+
+    Args:
+        track_index: Zero-based index of the track.
+        routing_type_name: Display name of the desired output routing type.
+        routing_channel_name: Display name of the desired output routing channel (optional).
+    """
+    params = {"track_index": track_index, "routing_type_name": routing_type_name}
+    if routing_channel_name is not None:
+        params["routing_channel_name"] = routing_channel_name
+    result = get_connection().send_command("set_track_output_routing", params)
+    return json.dumps(result)
+
+
+def fold_track(track_index: int, fold: int) -> str:
+    """Fold or unfold a group track.
+
+    Args:
+        track_index: Zero-based index of the group track.
+        fold: 1 to fold (collapse), 0 to unfold (expand).
+    """
+    result = get_connection().send_command("fold_track", {
+        "track_index": track_index,
+        "fold": fold,
+    })
+    return json.dumps(result)
+
+
 TOOLS = [
     get_track_info,
     create_midi_track,
@@ -78,4 +254,18 @@ TOOLS = [
     set_track_name,
     delete_track,
     get_return_tracks,
+    get_track_routing,
+    get_group_info,
+    duplicate_track,
+    duplicate_scene,
+    delete_scene,
+    set_track_color,
+    set_scene_name,
+    set_scene_color,
+    create_return_track,
+    delete_return_track,
+    set_track_monitoring,
+    set_track_input_routing,
+    set_track_output_routing,
+    fold_track,
 ]

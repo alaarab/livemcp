@@ -125,8 +125,66 @@ def set_track_send(control_surface, params):
     return {"track_index": track_index, "send_index": send_index, "value": value}
 
 
+def get_master_mixer_state(control_surface, params):
+    """Get master track mixer state: volume, pan, crossfader, and devices."""
+    song = control_surface.song()
+    master = song.master_track
+    mixer = master.mixer_device
+    devices = []
+    for i, device in enumerate(master.devices):
+        devices.append({
+            "index": i,
+            "name": device.name,
+            "class_name": device.class_name,
+            "is_active": device.is_active,
+        })
+    return {
+        "volume": mixer.volume.value,
+        "pan": mixer.panning.value,
+        "crossfader": mixer.crossfader.value,
+        "devices": devices,
+    }
+
+
+def set_master_volume(control_surface, params):
+    """Set the master track volume."""
+    value = params.get("volume")
+    if value is None:
+        raise ValueError("Missing required parameter: volume")
+    value = float(value)
+    song = control_surface.song()
+    song.master_track.mixer_device.volume.value = value
+    return {"volume": value}
+
+
+def set_master_pan(control_surface, params):
+    """Set the master track panning."""
+    value = params.get("pan")
+    if value is None:
+        raise ValueError("Missing required parameter: pan")
+    value = float(value)
+    song = control_surface.song()
+    song.master_track.mixer_device.panning.value = value
+    return {"pan": value}
+
+
+def set_crossfade_assign(control_surface, params):
+    """Set the crossfade assignment of a track (0=None, 1=A, 2=B)."""
+    song = control_surface.song()
+    track_index, track = _get_track(song, params)
+    assignment = params.get("assignment")
+    if assignment is None:
+        raise ValueError("Missing required parameter: assignment")
+    assignment = int(assignment)
+    if assignment not in (0, 1, 2):
+        raise ValueError("Assignment must be 0 (None), 1 (A), or 2 (B)")
+    track.mixer_device.crossfade_assign = assignment
+    return {"track_index": track_index, "crossfade_assign": assignment}
+
+
 READ_HANDLERS = {
     "get_mixer_state": get_mixer_state,
+    "get_master_mixer_state": get_master_mixer_state,
 }
 
 WRITE_HANDLERS = {
@@ -136,4 +194,7 @@ WRITE_HANDLERS = {
     "set_track_solo": set_track_solo,
     "set_track_arm": set_track_arm,
     "set_track_send": set_track_send,
+    "set_master_volume": set_master_volume,
+    "set_master_pan": set_master_pan,
+    "set_crossfade_assign": set_crossfade_assign,
 }
