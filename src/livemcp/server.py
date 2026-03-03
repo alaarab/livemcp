@@ -22,5 +22,14 @@ for _fn in _all_tools:
 
 
 def main():
-    """Entry point — run the MCP server over stdio."""
-    mcp.run(transport="stdio")
+    """Entry point — run the MCP server over stdio, or handle install/uninstall."""
+    import sys
+
+    if "--install" in sys.argv:
+        from .installer import install
+        install()
+    elif "--uninstall" in sys.argv:
+        from .installer import uninstall
+        uninstall()
+    else:
+        mcp.run(transport="stdio")

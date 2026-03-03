@@ -11,3 +11,6 @@ build/
 *.so
 .ruff_cache/
 .pytest_cache/
+
+# Build artifact — canonical source is remote_script/LiveMCP/
+src/livemcp/remote_script/
