@@ -93,7 +93,7 @@ cd livemcp
 | Category | Count | What You Can Do |
 |----------|------:|-----------------|
 | **Session** | 52 | Transport, tempo, time sig, punch, automation, views, scenes, locators, metadata |
-| **Clips** | 40 | MIDI notes (basic + extended w/ probability), fire/stop, loops, fades, warping, envelopes |
+| **Clips** | 39 | MIDI notes (basic + extended w/ probability), fire/stop, loops, fades, warping, envelopes |
 | **Tracks** | 28 | Create/delete, routing, monitoring, metering, freeze status, batch properties |
 | **Devices** | 24 | Browser loading, parameter control w/ display values, racks, chains, drum pads |
 | **Mixer** | 14 | Volume, pan, sends, mute, solo, arm, crossfade, real-time metering |

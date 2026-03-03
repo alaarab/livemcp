@@ -237,12 +237,12 @@ def get_all_track_meters(control_surface, params):
 READ_HANDLERS = {
     "get_mixer_state": get_mixer_state,
     "get_master_mixer_state": get_master_mixer_state,
-    "get_master_output_meter": get_master_output_meter,
-    "get_return_track_output_meter": get_return_track_output_meter,
-    "get_all_track_meters": get_all_track_meters,
 }
 
 WRITE_HANDLERS = {
+    "get_master_output_meter": get_master_output_meter,
+    "get_return_track_output_meter": get_return_track_output_meter,
+    "get_all_track_meters": get_all_track_meters,
     "set_track_volume": set_track_volume,
     "set_track_pan": set_track_pan,
     "set_track_mute": set_track_mute,

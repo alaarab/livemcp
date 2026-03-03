@@ -684,12 +684,12 @@ READ_HANDLERS = {
     "get_group_info": get_group_info,
     "get_all_tracks_info": get_all_tracks_info,
     "get_track_freeze_status": get_track_freeze_status,
-    "get_track_output_meter": get_track_output_meter,
     "get_clip_slot_status": get_clip_slot_status,
     "get_return_track_sends": get_return_track_sends,
 }
 
 WRITE_HANDLERS = {
+    "get_track_output_meter": get_track_output_meter,
     "create_midi_track": create_midi_track,
     "create_audio_track": create_audio_track,
     "set_track_name": set_track_name,
