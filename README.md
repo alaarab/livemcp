@@ -9,10 +9,10 @@ MCP server that exposes Ableton Live's internal Python API to AI assistants. 171
 ### 1. Install the Remote Script
 
 ```bash
-git clone https://github.com/alaarab/livemcp.git
-cd livemcp
-./scripts/install.sh
+uvx livemcp --install
 ```
+
+That's it. Works on macOS, Windows, and WSL. Auto-detects your Ableton installation and copies the remote script into the right place.
 
 ### 2. Enable in Ableton
 
@@ -265,8 +265,8 @@ Key design decisions:
 git clone https://github.com/alaarab/livemcp.git
 cd livemcp
 
-# Install remote script (symlinks into Ableton)
-./scripts/install.sh
+# Install remote script into Ableton
+python scripts/install.py
 
 # Run the MCP server locally
 uv run livemcp
@@ -296,9 +296,11 @@ livemcp/
 │   ├── browser.py            # 3-strategy device loading
 │   └── handlers/             # 7 handler modules (matching tools/)
 └── scripts/
-    ├── install.sh            # Symlink remote script into Ableton
-    ├── uninstall.sh          # Remove symlink
-    └── restart_ableton.sh    # Restart with cache clearing
+    ├── install.py            # Cross-platform installer (macOS/Windows/WSL)
+    ├── uninstall.py          # Cross-platform uninstaller
+    ├── install.sh            # macOS-only installer (legacy)
+    ├── uninstall.sh          # macOS-only uninstaller (legacy)
+    └── restart_ableton.sh    # Restart with cache clearing (macOS)
 ```
 
 ## Known Limitations
