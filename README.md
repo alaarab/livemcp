@@ -1,32 +1,8 @@
-<div align="center">
-
 # LiveMCP
 
-### The definitive MCP bridge for Ableton Live
+MCP server that exposes Ableton Live's internal Python API to AI assistants. 171 tools across 7 categories: session, clips, tracks, devices, mixer, arrangement, grooves.
 
-Control every aspect of Ableton Live from AI assistants like Claude — sessions, tracks, clips, devices, mixing, arrangement, and more.
-
-<br/>
-
-[![Tools](https://img.shields.io/badge/Tools-171-blueviolet?style=for-the-badge)](https://github.com/alaarab/livemcp)
-[![Ableton Live](https://img.shields.io/badge/Ableton_Live-12_Suite-00D8FF?style=for-the-badge)](https://www.ableton.com)
-[![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
-[![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
-[![MCP](https://img.shields.io/badge/MCP-Compatible-orange?style=for-the-badge)](https://modelcontextprotocol.io)
-
-<br/>
-
-</div>
-
----
-
-## Why LiveMCP?
-
-Most Ableton MCP tools give you 20-30 basic commands. LiveMCP gives you **171 tools** across **7 categories** — from firing clips to manipulating MIDI note probability, from loading any device in your library to reading real-time output meters. It's the most comprehensive programmatic interface to Ableton Live that exists.
-
-Built from scratch as a proper MCP server with a handler registry architecture, thread-safe write operations, and a 3-strategy browser that can find anything in your User Library.
-
----
+[![Tools](https://img.shields.io/badge/Tools-171-blueviolet)](https://github.com/alaarab/livemcp) [![Python](https://img.shields.io/badge/Python-3.10+-3776AB)](https://python.org) [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
 ## Quick Start
 
@@ -47,7 +23,7 @@ cd livemcp
 
 ### 3. Add to Your AI Assistant
 
-**Claude Code** (`~/.mcp.json`):
+**Claude Code** (`~/.mcp.json`) or **Claude Desktop** (`claude_desktop_config.json`):
 
 ```json
 {
@@ -60,21 +36,7 @@ cd livemcp
 }
 ```
 
-**Claude Desktop** (`claude_desktop_config.json`):
-
-```json
-{
-  "mcpServers": {
-    "LiveMCP": {
-      "command": "uvx",
-      "args": ["livemcp"]
-    }
-  }
-}
-```
-
-<details>
-<summary>Config file locations by OS</summary>
+Config file locations:
 
 | OS | Path |
 |----|------|
@@ -82,29 +44,21 @@ cd livemcp
 | Windows | `%APPDATA%\Claude\claude_desktop_config.json` |
 | Linux | `~/.config/Claude/claude_desktop_config.json` |
 
-</details>
-
----
-
 ## Tool Reference
 
-### Overview
-
-| Category | Count | What You Can Do |
-|----------|------:|-----------------|
-| **Session** | 52 | Transport, tempo, time sig, punch, automation, views, scenes, locators, metadata |
-| **Clips** | 39 | MIDI notes (basic + extended w/ probability), fire/stop, loops, fades, warping, envelopes |
-| **Tracks** | 28 | Create/delete, routing, monitoring, metering, freeze status, batch properties |
-| **Devices** | 24 | Browser loading, parameter control w/ display values, racks, chains, drum pads |
-| **Mixer** | 14 | Volume, pan, sends, mute, solo, arm, crossfade, real-time metering |
-| **Arrangement** | 9 | Timeline clips, MIDI/audio creation, overdub, duplicate to arrangement |
-| **Grooves** | 5 | Groove pool, per-clip groove assignment, groove properties |
-| | **171** | |
-
----
+| Category | Count |
+|----------|------:|
+| Session | 52 |
+| Clips | 39 |
+| Tracks | 28 |
+| Devices | 24 |
+| Mixer | 14 |
+| Arrangement | 9 |
+| Grooves | 5 |
+| **Total** | **171** |
 
 <details>
-<summary><b>Session Tools (52)</b></summary>
+<summary>Session Tools (52)</summary>
 
 | Tool | Description |
 |------|-------------|
@@ -149,7 +103,7 @@ cd livemcp
 </details>
 
 <details>
-<summary><b>Clip Tools (40)</b></summary>
+<summary>Clip Tools (39)</summary>
 
 | Tool | Description |
 |------|-------------|
@@ -178,7 +132,7 @@ cd livemcp
 </details>
 
 <details>
-<summary><b>Track Tools (28)</b></summary>
+<summary>Track Tools (28)</summary>
 
 | Tool | Description |
 |------|-------------|
@@ -200,7 +154,7 @@ cd livemcp
 </details>
 
 <details>
-<summary><b>Device Tools (24)</b></summary>
+<summary>Device Tools (24)</summary>
 
 | Tool | Description |
 |------|-------------|
@@ -221,7 +175,7 @@ cd livemcp
 </details>
 
 <details>
-<summary><b>Mixer Tools (14)</b></summary>
+<summary>Mixer Tools (14)</summary>
 
 | Tool | Description |
 |------|-------------|
@@ -239,7 +193,7 @@ cd livemcp
 </details>
 
 <details>
-<summary><b>Arrangement Tools (9)</b></summary>
+<summary>Arrangement Tools (9)</summary>
 
 | Tool | Description |
 |------|-------------|
@@ -255,7 +209,7 @@ cd livemcp
 </details>
 
 <details>
-<summary><b>Groove Tools (5)</b></summary>
+<summary>Groove Tools (5)</summary>
 
 | Tool | Description |
 |------|-------------|
@@ -267,8 +221,6 @@ cd livemcp
 
 </details>
 
----
-
 ## Architecture
 
 ```
@@ -279,7 +231,7 @@ cd livemcp
                          │ MCP Protocol (stdio)
 ┌────────────────────────▼────────────────────────────────┐
 │                   MCP Server                             │
-│            src/livemcp/ (FastMCP)                         │
+│            src/livemcp/ (FastMCP)                        │
 │                                                          │
 │   171 tool functions with type hints + docstrings        │
 │   7 modules: session, tracks, clips, devices,            │
@@ -288,7 +240,7 @@ cd livemcp
                          │ TCP Socket (localhost:9877)
 ┌────────────────────────▼────────────────────────────────┐
 │              Ableton Remote Script                       │
-│         remote_script/LiveMCP/ (Python 3.11)             │
+│         remote_script/LiveMCP/ (Python 3.11)            │
 │                                                          │
 │   Handler registry: READ (socket thread)                 │
 │                      WRITE (main thread via Queue)       │
@@ -300,12 +252,11 @@ cd livemcp
 └─────────────────────────────────────────────────────────┘
 ```
 
-**Key design decisions:**
+Key design decisions:
+
 - **Thread safety** — Read operations run on the socket thread. Write operations are scheduled on Ableton's main thread via `schedule_message()` + `Queue` to prevent crashes.
 - **Handler registry** — `READ_HANDLERS` and `WRITE_HANDLERS` dicts replace if/elif chains. Adding a tool = one handler function + one dict entry.
 - **3-strategy browser** — Finds devices by URI match, path navigation, or recursive name search. Handles spaces, special characters, and nested folders automatically.
-
----
 
 ## Development
 
@@ -350,8 +301,6 @@ livemcp/
     └── restart_ableton.sh    # Restart with cache clearing
 ```
 
----
-
 ## Known Limitations
 
 These are Ableton Live API limitations, not LiveMCP bugs:
@@ -367,16 +316,6 @@ These are Ableton Live API limitations, not LiveMCP bugs:
 | Group Tracks | Cannot create | Can read group info, cannot create groups |
 | Groove Removal | API bug | `clip.groove = None` crashes; raises informative error |
 
----
-
 ## License
 
 MIT
-
----
-
-<div align="center">
-
-Built with [FastMCP](https://github.com/jlowin/fastmcp) and the [Ableton Live Object Model](https://docs.cycling74.com/max8/vignettes/live_object_model)
-
-</div>
