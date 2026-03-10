@@ -56,6 +56,34 @@ class SessionToolTests(unittest.TestCase):
         self.assertEqual(result["remote_info"]["protocol_version"], 2)
         self.assertEqual(result["warnings"], [])
 
+    @mock.patch("livemcp.tools.session.get_connection")
+    @mock.patch("livemcp.tools.session.probe_command")
+    @mock.patch("livemcp.tools.session.get_install_status")
+    def test_get_livemcp_status_treats_legacy_remote_as_reachable(
+        self,
+        get_install_status,
+        probe_command,
+        get_connection,
+    ):
+        get_install_status.return_value = {
+            "installed": True,
+            "needs_install": False,
+            "install_mode": "copy",
+        }
+        probe_command.side_effect = RuntimeError("Unknown command: get_livemcp_info")
+        get_connection.return_value.get_server_info.return_value = None
+
+        result = session.get_livemcp_status()
+
+        self.assertTrue(result["remote_reachable"])
+        self.assertEqual(result["remote_info"]["protocol_version"], 1)
+        self.assertIsNone(result["remote_error"])
+        self.assertIn(
+            "Ableton is running an older LiveMCP transport protocol; reinstall and restart Ableton.",
+            result["warnings"],
+        )
+        self.assertNotIn("LiveMCP socket is not currently reachable.", result["warnings"])
+
     def test_controller_tools_publish_output_schema(self):
         structured_tools = [
             "get_session_info",
