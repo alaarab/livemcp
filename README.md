@@ -1,8 +1,43 @@
 # LiveMCP
 
-MCP server that exposes Ableton Live's internal Python API to AI assistants. 201 tools across 7 categories plus controller-oriented `live://...` MCP resources for session, status, selection, track, scene, and device state.
+LiveMCP turns Ableton Live into an MCP-accessible control surface.
+
+It gives an MCP client two useful layers:
+
+- tools for doing things inside Live
+- `live://...` resources for reading stable state without stitching together a bunch of calls
+
+The point is control and inspection. LiveMCP is built for tasks like selecting tracks, focusing views, firing clips, changing device parameters, checking transport state, handling startup dialogs, and keeping the remote script in sync with the package. It is not trying to be an AI songwriter.
 
 [![Tools](https://img.shields.io/badge/Tools-201-blueviolet)](https://github.com/alaarab/livemcp) [![Python](https://img.shields.io/badge/Python-3.10+-3776AB)](https://python.org) [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+
+## What It Is
+
+- A Python MCP server that talks to Ableton over a local TCP bridge.
+- A bundled Ableton MIDI Remote Script that exposes the Live object model.
+- A controller-first interface for transport, views, tracks, clips, devices, mixer state, and session diagnostics.
+
+## What It Is Not
+
+- Not a generative music framework.
+- Not a replacement for Ableton's UI.
+- Not a promise that every Live feature is scriptable; some parts of the Ableton API are still read-only or missing entirely.
+
+## At A Glance
+
+- `201` tools across session, clips, tracks, devices, mixer, arrangement, and grooves
+- controller-oriented MCP resources like `live://status`, `live://view/current`, and `live://track/{track_index}`
+- packaged install-status and Ableton restart helpers
+- install support for macOS, Windows, and WSL
+- macOS-only lifecycle automation for restart / quit / prompt handling
+
+## How People Actually Use It
+
+- "Read `live://selection/track` and tell me what's armed."
+- "Show Session view, select track 3, set monitoring to Auto, and arm it."
+- "Read `live://status` before touching Ableton so we know whether the installed script is stale."
+- "Focus the Browser, load Operator onto the selected track, and give me the current parameter values."
+- "Restart Live, dismiss the crash-recovery junk if it appears, and wait until the socket comes back."
 
 ## Quick Start
 
@@ -12,7 +47,9 @@ MCP server that exposes Ableton Live's internal Python API to AI assistants. 201
 uvx livemcp --install
 ```
 
-That's it. Works on macOS, Windows, and WSL. Auto-detects your Ableton installation and copies the remote script into the right place.
+That finds Ableton, copies the bundled `LiveMCP` remote script into the right `MIDI Remote Scripts` folder, and leaves the package side ready to run.
+
+Install works on macOS, Windows, and WSL. The app lifecycle helpers later in this README are macOS-only.
 
 For local development on macOS, use a symlinked install instead:
 
@@ -43,7 +80,36 @@ uv run livemcp --install --symlink-install
 }
 ```
 
-### Ableton Lifecycle Helpers (macOS)
+### 4. Try the Controller Surface
+
+Once the server is running, the most useful starting points are:
+
+- read `live://status`
+- read `live://session/current`
+- read `live://view/current`
+- call `get_session_info`
+- call `show_view("Session")` or `focus_view("Browser")`
+
+## Resources vs Tools
+
+Use resources when you want a clean snapshot of current state:
+
+- `live://status`
+- `live://selection/track`
+- `live://view/current`
+- `live://track/0`
+
+Use tools when you want to change something:
+
+- `start_playback`
+- `set_track_volume`
+- `select_device`
+- `show_view`
+- `press_current_dialog_button`
+
+That split matters. Tools are for actions. Resources are for inspection.
+
+## Ableton Lifecycle Helpers (macOS)
 
 Use the packaged helper when Live gets stuck on save, crash-recovery, or restore prompts:
 
@@ -58,6 +124,8 @@ from `~/Library/Preferences/Ableton/Live */`, quits Live, relaunches the detecte
 accepts common crash/restore dialogs when macOS Accessibility is available, and waits for the
 LiveMCP socket on port `9877`.
 
+If the installed Ableton-side copy is missing or out of sync, restart also repairs it before relaunching Live.
+
 Config file locations:
 
 | OS | Path |
@@ -66,7 +134,17 @@ Config file locations:
 | Windows | `%APPDATA%\Claude\claude_desktop_config.json` |
 | Linux | `~/.config/Claude/claude_desktop_config.json` |
 
-## Tool Reference
+## Capability Map
+
+You do not need to memorize 201 commands to use LiveMCP well. The useful mental model is:
+
+- session tools for transport, selection, views, dialogs, and global state
+- track and mixer tools for routing, arm/solo/mute, levels, and return paths
+- device tools for loading instruments/effects and changing parameters
+- clip and arrangement tools for manipulating content that already exists in the set
+- resources when you want a stable read surface for the current state
+
+The tables below are the full reference.
 
 | Category | Count |
 |----------|------:|
@@ -286,30 +364,29 @@ These are meant for controller-style reads where a client wants stable Ableton s
 
 </details>
 
-## Architecture
+## How It Works
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                     AI Assistant                         │
-│              (Claude, or any MCP client)                 │
+│                    MCP Client                            │
+│              (Claude, Codex, etc.)                       │
 └────────────────────────┬────────────────────────────────┘
                          │ MCP Protocol (stdio)
 ┌────────────────────────▼────────────────────────────────┐
-│                   MCP Server                             │
+│                Package-Side MCP Server                   │
 │            src/livemcp/ (FastMCP)                        │
 │                                                          │
-│   201 tool functions with type hints + docstrings        │
-│   7 modules: session, tracks, clips, devices,            │
-│              mixer, arrangement, grooves                 │
+│   201 tools + live:// resources                          │
+│   structured controller state + action calls             │
 └────────────────────────┬────────────────────────────────┘
                          │ TCP Socket (localhost:9877)
 ┌────────────────────────▼────────────────────────────────┐
 │              Ableton Remote Script                       │
-│         remote_script/LiveMCP/ (Python 3.11)            │
+│         remote_script/LiveMCP/ (Python 3.11)             │
 │                                                          │
-│   Handler registry: READ (socket thread)                 │
-│                      WRITE (main thread via Queue)       │
-│   3-strategy browser: URI → path → recursive search      │
+│   READ handlers on the socket thread                     │
+│   WRITE handlers on Ableton's main thread                │
+│   browser loading + Live API access                      │
 └────────────────────────┬────────────────────────────────┘
                          │ Live Object Model
 ┌────────────────────────▼────────────────────────────────┐
@@ -317,13 +394,13 @@ These are meant for controller-style reads where a client wants stable Ableton s
 └─────────────────────────────────────────────────────────┘
 ```
 
-Key design decisions:
+Three design choices matter most:
 
-- **Thread safety** — Read operations run on the socket thread. Write operations are scheduled on Ableton's main thread via `schedule_message()` + `Queue` to prevent crashes.
-- **Handler registry** — `READ_HANDLERS` and `WRITE_HANDLERS` dicts replace if/elif chains. Adding a tool = one handler function + one dict entry.
-- **3-strategy browser** — Finds devices by URI match, path navigation, or recursive name search. Handles spaces, special characters, and nested folders automatically.
+- **Thread safety** — reads happen on the socket thread; writes are scheduled onto Ableton's main thread so Live does not get mutated from the wrong place.
+- **Single-source registration** — tool modules and handler registries fail fast on duplicate names instead of silently shadowing commands.
+- **Controller-first state model** — tools handle actions, and resources expose the current state a client usually wants to inspect before acting.
 
-## Development
+## Developing LiveMCP
 
 ```bash
 # Clone and set up
@@ -350,6 +427,14 @@ bash scripts/publish.sh --dry-run
 uv run python -c "from livemcp.server import mcp; print(len(mcp._tool_manager._tools), 'tools')"
 ```
 
+For the local dev loop on macOS, the useful rhythm is:
+
+1. `uv run livemcp --install --symlink-install`
+2. edit package or remote-script code
+3. `uv run livemcp --restart-ableton`
+4. test against the running Live instance
+5. `bash scripts/publish.sh --dry-run` before cutting a release
+
 ### Project Structure
 
 ```
@@ -357,6 +442,7 @@ livemcp/
 ├── src/livemcp/              # MCP server (pip/uvx installable)
 │   ├── server.py             # FastMCP app, registers all tool modules
 │   ├── connection.py         # TCP client to remote script
+│   ├── resources.py          # live:// MCP resources for controller state
 │   └── tools/                # 7 tool modules
 │       ├── session.py        # 74 session tools
 │       ├── clips.py          # 40 clip tools
@@ -380,7 +466,7 @@ livemcp/
 
 ## Known Limitations
 
-These are Ableton Live API limitations, not LiveMCP bugs:
+Most of these are Ableton Live API limitations, not LiveMCP bugs:
 
 | Feature | Status | Notes |
 |---------|--------|-------|
