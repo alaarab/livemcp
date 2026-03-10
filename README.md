@@ -307,6 +307,9 @@ cd livemcp
 uv run livemcp --install
 # or: bash scripts/install.sh
 
+# See whether Ableton is using the current remote-script copy
+uv run livemcp --install-status
+
 # Run the MCP server locally
 uv run livemcp
 
