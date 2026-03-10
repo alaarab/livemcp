@@ -61,11 +61,22 @@ class QuitAbletonTests(unittest.TestCase):
 
         self.assertEqual(found, matching)
 
-    @mock.patch("livemcp.installer.get_install_status", return_value={"ableton_found": True, "source_found": True, "installed": False, "in_sync": False})
+    @mock.patch(
+        "livemcp.installer.get_install_status",
+        return_value={
+            "ableton_found": True,
+            "source_found": True,
+            "installed": False,
+            "in_sync": False,
+            "needs_install": True,
+        },
+    )
     @mock.patch("builtins.print")
     def test_warn_if_install_outdated_prints_when_missing(self, print_mock, _get_install_status):
-        ableton._warn_if_install_outdated()
+        with mock.patch("livemcp.installer.install") as install:
+            ableton._sync_install_if_needed()
 
+        install.assert_called_once_with(use_symlink=False)
         print_mock.assert_called_once()
 
 

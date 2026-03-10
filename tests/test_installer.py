@@ -37,7 +37,7 @@ class InstallerTests(unittest.TestCase):
         )
 
     @mock.patch("livemcp.installer._remove_old")
-    @mock.patch("livemcp.installer.shutil.copytree")
+    @mock.patch("livemcp.installer._copy_remote_script")
     @mock.patch("livemcp.installer.os.symlink")
     @mock.patch("livemcp.installer._find_ableton")
     @mock.patch("livemcp.installer._get_remote_script_source")
@@ -46,7 +46,7 @@ class InstallerTests(unittest.TestCase):
         get_remote_script_source,
         find_ableton,
         symlink,
-        copytree,
+        copy_remote_script,
         _remove_old,
     ):
         get_remote_script_source.return_value = Path("/tmp/LiveMCP")
@@ -55,7 +55,10 @@ class InstallerTests(unittest.TestCase):
         with mock.patch.dict(os.environ, {}, clear=False):
             installer.install()
 
-        copytree.assert_called_once_with(Path("/tmp/LiveMCP"), Path("/tmp/MIDI Remote Scripts/LiveMCP"))
+        copy_remote_script.assert_called_once_with(
+            Path("/tmp/LiveMCP"),
+            Path("/tmp/MIDI Remote Scripts/LiveMCP"),
+        )
         symlink.assert_not_called()
 
     @mock.patch("livemcp.installer._remove_old")
@@ -100,6 +103,26 @@ class InstallerTests(unittest.TestCase):
         self.assertEqual(status["install_mode"], "copy")
         self.assertFalse(status["in_sync"])
         self.assertTrue(status["needs_install"])
+
+    @mock.patch("livemcp.installer._remove_old")
+    @mock.patch("livemcp.installer._find_ableton")
+    @mock.patch("livemcp.installer._get_remote_script_source")
+    def test_install_copy_ignores_pycache(self, get_remote_script_source, find_ableton, _remove_old):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            source = temp_path / "source"
+            target = temp_path / "target"
+            source.mkdir(parents=True)
+            (source / "__init__.py").write_text("a = 1\n", encoding="utf-8")
+            (source / "__pycache__").mkdir()
+            (source / "__pycache__" / "module.cpython-311.pyc").write_bytes(b"compiled")
+            get_remote_script_source.return_value = source
+            find_ableton.return_value = target, "macos"
+
+            installer.install(use_symlink=False)
+
+            self.assertTrue((target / "LiveMCP" / "__init__.py").exists())
+            self.assertFalse((target / "LiveMCP" / "__pycache__").exists())
 
 
 if __name__ == "__main__":

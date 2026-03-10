@@ -169,3 +169,39 @@ def get_connection() -> AbletonConnection:
         if _instance is None:
             _instance = AbletonConnection()
         return _instance
+
+
+def probe_command(command_type: str, params: dict, timeout: float = 2.0) -> dict:
+    """Send a one-off command over a short-lived socket.
+
+    This avoids the singleton retry/timeouts when a status probe only needs a
+    quick answer about whether the Ableton-side socket is reachable.
+    """
+    request_id = 1
+    payload = AbletonConnection._build_payload(command_type, params, request_id)
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.settimeout(timeout)
+        sock.connect((HOST, PORT))
+        sock.sendall(payload + MESSAGE_TERMINATOR)
+
+        buffer = b""
+        while MESSAGE_TERMINATOR not in buffer:
+            chunk = sock.recv(RECV_SIZE)
+            if not chunk:
+                raise ConnectionError("Remote script closed the connection")
+            buffer += chunk
+
+    message, _, _ = buffer.partition(MESSAGE_TERMINATOR)
+    if not message:
+        raise ConnectionError("Remote script returned an empty response")
+
+    response = json.loads(message.decode("utf-8"))
+    response_id = response.get("id")
+    if response_id is not None and response_id != request_id:
+        raise ConnectionError(
+            "Mismatched response id: expected {0}, got {1}".format(request_id, response_id)
+        )
+    if response.get("status") == "error":
+        error_msg = response.get("error") or response.get("message", "Unknown error")
+        raise RuntimeError(error_msg)
+    return response.get("result", {})

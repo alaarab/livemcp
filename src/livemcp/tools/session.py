@@ -3,7 +3,10 @@
 import json
 from typing import Optional
 
-from ..connection import get_connection
+from .. import __version__
+from ..connection import get_connection, probe_command
+from ..installer import get_install_status
+from ..protocol import TRANSPORT_PROTOCOL_VERSION
 
 
 def get_session_info() -> str:
@@ -324,6 +327,48 @@ def get_livemcp_info() -> str:
     """Get LiveMCP remote-script transport capability information."""
     result = get_connection().send_command("get_livemcp_info", {})
     return json.dumps(result)
+
+
+def get_livemcp_status() -> str:
+    """Get local install state and remote-script capability status.
+
+    Returns package version, client transport version, local install status,
+    remote-script capability info when reachable, and actionable warnings.
+    """
+    status = {
+        "package_version": __version__,
+        "client_protocol_version": TRANSPORT_PROTOCOL_VERSION,
+        "install_status": get_install_status(),
+        "remote_reachable": False,
+        "remote_info": None,
+        "cached_server_info": get_connection().get_server_info(),
+        "remote_error": None,
+        "warnings": [],
+    }
+
+    try:
+        status["remote_info"] = probe_command("get_livemcp_info", {}, timeout=2.0)
+        status["remote_reachable"] = True
+    except Exception as exc:
+        status["remote_error"] = str(exc)
+
+    install_status = status["install_status"]
+    if not install_status.get("installed"):
+        status["warnings"].append("LiveMCP remote script is not installed in Ableton.")
+    elif install_status.get("needs_install"):
+        status["warnings"].append(
+            "Installed LiveMCP remote script is out of sync with the current source; run --install."
+        )
+
+    remote_info = status["remote_info"]
+    if not status["remote_reachable"]:
+        status["warnings"].append("LiveMCP socket is not currently reachable.")
+    elif remote_info and remote_info.get("protocol_version", 0) < TRANSPORT_PROTOCOL_VERSION:
+        status["warnings"].append(
+            "Ableton is running an older LiveMCP transport protocol; reinstall and restart Ableton."
+        )
+
+    return json.dumps(status)
 
 
 def get_application_dialog() -> str:
@@ -747,6 +792,7 @@ TOOLS = [
     set_scene_time_signature,
     get_application_info,
     get_livemcp_info,
+    get_livemcp_status,
     get_application_dialog,
     press_current_dialog_button,
     get_application_cpu_usage,
