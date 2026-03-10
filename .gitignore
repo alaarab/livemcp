@@ -14,3 +14,10 @@ build/
 
 # Build artifact — canonical source is remote_script/LiveMCP/
 src/livemcp/remote_script/
+
+# Personal workspace files
+.claude/
+AGENTS.md
+CLAUDE.md
+FINDINGS.md
+LEARNINGS.md
