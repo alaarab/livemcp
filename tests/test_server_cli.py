@@ -15,6 +15,11 @@ class ServerCliTests(unittest.TestCase):
         server.main([])
         run_server.assert_called_once_with(transport="stdio")
 
+    @mock.patch("livemcp.installer.install")
+    def test_main_passes_symlink_install_to_installer(self, install):
+        server.main(["--install", "--symlink-install"])
+        install.assert_called_once_with(use_symlink=True)
+
     @mock.patch("livemcp.ableton.quit_ableton")
     def test_main_passes_no_force_to_quit_helper(self, quit_ableton):
         with mock.patch("sys.stdout", new=io.StringIO()):
@@ -25,6 +30,13 @@ class ServerCliTests(unittest.TestCase):
         with self.assertRaises(SystemExit) as context:
             with mock.patch("sys.stderr", new=io.StringIO()):
                 server.main(["--no-force"])
+
+        self.assertEqual(context.exception.code, 2)
+
+    def test_main_rejects_symlink_install_without_install(self):
+        with self.assertRaises(SystemExit) as context:
+            with mock.patch("sys.stderr", new=io.StringIO()):
+                server.main(["--symlink-install"])
 
         self.assertEqual(context.exception.code, 2)
 

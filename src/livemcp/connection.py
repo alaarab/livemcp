@@ -5,6 +5,8 @@ import socket
 import time
 import threading
 
+from .protocol import TRANSPORT_PROTOCOL_VERSION
+
 HOST = "127.0.0.1"
 PORT = 9877
 RECV_SIZE = 8192
@@ -26,6 +28,7 @@ class AbletonConnection:
         self._request_lock = threading.RLock()
         self._request_id_lock = threading.Lock()
         self._request_id = 0
+        self._server_info = None
 
     def _next_request_id(self) -> int:
         """Return the next monotonically increasing request id."""
@@ -81,6 +84,32 @@ class AbletonConnection:
         if response.get("status") == "error":
             error_msg = response.get("error") or response.get("message", "Unknown error")
             raise RuntimeError(error_msg)
+        self._refresh_server_info()
+
+    def _refresh_server_info(self) -> dict:
+        """Fetch server capability info, falling back to legacy defaults."""
+        request_id = self._next_request_id()
+        payload = self._build_payload("get_livemcp_info", {}, request_id)
+        response = self._send_payload_unlocked(payload, expected_request_id=request_id)
+        if response.get("status") == "error":
+            error_msg = response.get("error") or response.get("message", "Unknown error")
+            if "Unknown command: get_livemcp_info" in error_msg:
+                self._server_info = {
+                    "protocol_version": 1,
+                    "supports_request_ids": False,
+                    "transport": "tcp-json-lines",
+                    "legacy_compatibility_mode": True,
+                }
+                return self._server_info
+            raise RuntimeError(error_msg)
+
+        result = response.get("result", {})
+        result.setdefault("protocol_version", TRANSPORT_PROTOCOL_VERSION)
+        result.setdefault("supports_request_ids", True)
+        result.setdefault("transport", "tcp-json-lines")
+        result["legacy_compatibility_mode"] = False
+        self._server_info = result
+        return result
 
     def disconnect(self):
         """Close the socket connection."""
@@ -91,6 +120,7 @@ class AbletonConnection:
                 pass
             self._socket = None
         self._recv_buffer = b""
+        self._server_info = None
 
     def send_command(self, command_type: str, params: dict) -> dict:
         """Send a JSON command and return the parsed result.
@@ -126,6 +156,10 @@ class AbletonConnection:
                     MAX_RETRIES, last_error
                 )
             )
+
+    def get_server_info(self) -> dict | None:
+        """Return the last negotiated server capability info, if available."""
+        return dict(self._server_info) if self._server_info is not None else None
 
 
 def get_connection() -> AbletonConnection:

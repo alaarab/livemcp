@@ -1,5 +1,7 @@
 """Session-level handlers: tempo, transport, time signature."""
 
+from ..protocol import TRANSPORT_PROTOCOL_VERSION
+
 DEFAULT_MAIN_VIEWS = [
     "Browser",
     "Arranger",
@@ -119,6 +121,15 @@ def get_session_info(control_surface, params):
         "loop": song.loop,
         "loop_start": song.loop_start,
         "loop_length": song.loop_length,
+    }
+
+
+def get_livemcp_info(control_surface, params):
+    """Return transport capability information for the installed remote script."""
+    return {
+        "protocol_version": TRANSPORT_PROTOCOL_VERSION,
+        "supports_request_ids": True,
+        "transport": "tcp-json-lines",
     }
 
 
@@ -1101,6 +1112,7 @@ def get_scene_clips(control_surface, params):
 
 READ_HANDLERS = {
     "get_session_info": get_session_info,
+    "get_livemcp_info": get_livemcp_info,
     "get_song_time": get_song_time,
     "get_cue_points": get_cue_points,
     "get_selected_track": get_selected_track,

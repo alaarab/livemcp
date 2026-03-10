@@ -320,6 +320,12 @@ def get_application_info() -> str:
     return json.dumps(result)
 
 
+def get_livemcp_info() -> str:
+    """Get LiveMCP remote-script transport capability information."""
+    result = get_connection().send_command("get_livemcp_info", {})
+    return json.dumps(result)
+
+
 def get_application_dialog() -> str:
     """Get information about the current Ableton dialog box.
 
@@ -740,6 +746,7 @@ TOOLS = [
     set_scene_tempo,
     set_scene_time_signature,
     get_application_info,
+    get_livemcp_info,
     get_application_dialog,
     press_current_dialog_button,
     get_application_cpu_usage,
