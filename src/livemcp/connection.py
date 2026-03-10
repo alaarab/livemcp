@@ -24,6 +24,19 @@ class AbletonConnection:
         self._socket = None
         self._recv_buffer = b""
         self._request_lock = threading.RLock()
+        self._request_id_lock = threading.Lock()
+        self._request_id = 0
+
+    def _next_request_id(self) -> int:
+        """Return the next monotonically increasing request id."""
+        with self._request_id_lock:
+            self._request_id += 1
+            return self._request_id
+
+    @staticmethod
+    def _build_payload(command_type: str, params: dict, request_id: int) -> bytes:
+        """Encode a framed command payload."""
+        return json.dumps({"id": request_id, "type": command_type, "params": params}).encode("utf-8")
 
     def _open_socket(self):
         """Create and connect a fresh TCP socket."""
@@ -32,7 +45,7 @@ class AbletonConnection:
         sock.connect((HOST, PORT))
         return sock
 
-    def _send_payload_unlocked(self, payload: bytes) -> dict:
+    def _send_payload_unlocked(self, payload: bytes, expected_request_id: int) -> dict:
         """Send a framed payload and return the decoded response."""
         self._socket.sendall(payload + MESSAGE_TERMINATOR)
         self._socket.settimeout(TIMEOUT)
@@ -46,15 +59,25 @@ class AbletonConnection:
         message, _, self._recv_buffer = self._recv_buffer.partition(MESSAGE_TERMINATOR)
         if not message:
             raise ConnectionError("Remote script returned an empty response")
-        return json.loads(message.decode("utf-8"))
+        response = json.loads(message.decode("utf-8"))
+        response_id = response.get("id")
+        if response_id is not None and response_id != expected_request_id:
+            raise ConnectionError(
+                "Mismatched response id: expected {0}, got {1}".format(
+                    expected_request_id,
+                    response_id,
+                )
+            )
+        return response
 
     def connect(self):
         """Establish connection and validate with a get_session_info ping."""
         self.disconnect()
         self._socket = self._open_socket()
         self._recv_buffer = b""
-        payload = json.dumps({"type": "get_session_info", "params": {}}).encode("utf-8")
-        response = self._send_payload_unlocked(payload)
+        request_id = self._next_request_id()
+        payload = self._build_payload("get_session_info", {}, request_id)
+        response = self._send_payload_unlocked(payload, expected_request_id=request_id)
         if response.get("status") == "error":
             error_msg = response.get("error") or response.get("message", "Unknown error")
             raise RuntimeError(error_msg)
@@ -75,7 +98,8 @@ class AbletonConnection:
         Raises RuntimeError if the remote script returns an error status.
         Raises ConnectionError after exhausting retries.
         """
-        payload = json.dumps({"type": command_type, "params": params}).encode("utf-8")
+        request_id = self._next_request_id()
+        payload = self._build_payload(command_type, params, request_id)
 
         with self._request_lock:
             last_error = None
@@ -84,7 +108,7 @@ class AbletonConnection:
                     if self._socket is None:
                         self.connect()
 
-                    response = self._send_payload_unlocked(payload)
+                    response = self._send_payload_unlocked(payload, expected_request_id=request_id)
                     if response.get("status") == "error":
                         error_msg = response.get("error") or response.get("message", "Unknown error")
                         raise RuntimeError(error_msg)

@@ -123,12 +123,21 @@ class LiveMCPServer:
                         self._send_json(client, {"status": "error", "error": "Invalid JSON payload"})
                         continue
 
+                    request_id = command.get("id")
                     try:
                         response = self._dispatch(command)
-                        self._send_json(client, {"status": "success", "result": response})
+                        self._send_json(
+                            client,
+                            {"status": "success", "result": response},
+                            request_id=request_id,
+                        )
                     except Exception as e:
                         self.log("Command error: {0}\n{1}".format(e, traceback.format_exc()))
-                        self._send_json(client, {"status": "error", "error": str(e)})
+                        self._send_json(
+                            client,
+                            {"status": "error", "error": str(e)},
+                            request_id=request_id,
+                        )
         except Exception as e:
             self.log("Client error: {0}".format(e))
         finally:
@@ -142,8 +151,11 @@ class LiveMCPServer:
             except Exception:
                 pass
 
-    def _send_json(self, client, data):
+    def _send_json(self, client, data, request_id=None):
         """Send a JSON response to the client."""
+        if request_id is not None:
+            data = dict(data)
+            data["id"] = request_id
         payload = json.dumps(data).encode("utf-8") + MESSAGE_TERMINATOR
         client.sendall(payload)
 
