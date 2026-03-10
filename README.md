@@ -329,11 +329,9 @@ livemcp/
 │   ├── browser.py            # 3-strategy device loading
 │   └── handlers/             # 7 handler modules (matching tools/)
 └── scripts/
-    ├── install.py            # Cross-platform installer (macOS/Windows/WSL)
-    ├── uninstall.py          # Cross-platform uninstaller
-    ├── install.sh            # macOS-only installer (legacy)
-    ├── uninstall.sh          # macOS-only uninstaller (legacy)
-    └── restart_ableton.sh    # Restart with cache clearing (macOS)
+    ├── install.sh            # Wrapper for `uv run livemcp --install`
+    ├── uninstall.sh          # Wrapper for `uv run livemcp --uninstall`
+    └── restart_ableton.sh    # Wrapper for `uv run livemcp --restart-ableton`
 ```
 
 ## Known Limitations

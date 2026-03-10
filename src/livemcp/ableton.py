@@ -11,12 +11,13 @@ import subprocess
 import time
 from pathlib import Path
 
-APP_CANDIDATES = [
-    "Ableton Live 12 Suite",
-    "Ableton Live 12 Standard",
-    "Ableton Live 12 Trial",
-    "Ableton Live 11 Suite",
-]
+EDITION_PRIORITY = {
+    "Suite": 5,
+    "Standard": 4,
+    "Intro": 3,
+    "Lite": 2,
+    "Trial": 1,
+}
 PROCESS_NAME = "Live"
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 9877
@@ -45,26 +46,53 @@ def _ensure_macos() -> None:
         raise RuntimeError("Ableton app lifecycle helpers are macOS-only")
 
 
+def _parse_ableton_label(label: str) -> tuple[tuple[int, ...], int, str]:
+    match = re.search(r"Live (\d+(?:\.\d+)*) (.+)", label)
+    if not match:
+        return (0,), 0, label
+
+    version = tuple(int(part) for part in match.group(1).split("."))
+    edition = match.group(2).strip()
+    return version, EDITION_PRIORITY.get(edition, 0), label
+
+
 def find_ableton_app() -> str:
     """Return the preferred Ableton app name installed in /Applications."""
     _ensure_macos()
     applications_dir = Path("/Applications")
-
-    for app_name in APP_CANDIDATES:
-        if (applications_dir / f"{app_name}.app").is_dir():
-            return app_name
-
-    for app_path in sorted(applications_dir.glob("Ableton Live*.app")):
-        return app_path.stem
+    app_paths = [app_path for app_path in applications_dir.glob("Ableton Live*.app") if app_path.is_dir()]
+    if app_paths:
+        return max(app_paths, key=lambda path: _parse_ableton_label(path.stem)).stem
 
     raise RuntimeError("Could not find an Ableton Live app in /Applications")
 
 
+def _find_remote_script_dir(
+    repo_root: Path | None = None,
+    package_dir: Path | None = None,
+) -> Path | None:
+    candidates = []
+    base_package_dir = package_dir or Path(__file__).resolve().parent
+    candidates.append(base_package_dir / "remote_script")
+    candidates.append(base_package_dir.parents[2] / "remote_script")
+    if repo_root is not None:
+        candidates.append(Path(repo_root) / "remote_script")
+
+    seen = set()
+    for candidate in candidates:
+        key = str(candidate)
+        if key in seen:
+            continue
+        seen.add(key)
+        if candidate.is_dir():
+            return candidate
+    return None
+
+
 def clear_remote_script_pycache(repo_root: Path | None = None) -> None:
     """Clear remote script __pycache__ directories so Ableton loads fresh code."""
-    base_dir = repo_root or Path(__file__).resolve().parents[2]
-    remote_script_dir = base_dir / "remote_script"
-    if not remote_script_dir.is_dir():
+    remote_script_dir = _find_remote_script_dir(repo_root=repo_root)
+    if remote_script_dir is None:
         return
 
     for cache_dir in remote_script_dir.rglob("__pycache__"):

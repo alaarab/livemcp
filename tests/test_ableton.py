@@ -1,7 +1,8 @@
 import unittest
-from unittest import mock
 from pathlib import Path
 import sys
+import tempfile
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
@@ -29,6 +30,20 @@ class QuitAbletonTests(unittest.TestCase):
         launch_osascript.assert_called_once_with('tell application "Ableton Live 12 Suite" to quit')
         dismiss_quit_dialog.assert_called()
         wait_for_dialog.assert_called()
+
+    def test_find_remote_script_dir_prefers_packaged_layout(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            package_dir = temp_path / "package"
+            repo_root = temp_path / "repo"
+            packaged_remote_script = package_dir / "remote_script"
+            repo_remote_script = repo_root / "remote_script"
+            packaged_remote_script.mkdir(parents=True)
+            repo_remote_script.mkdir(parents=True)
+
+            found = ableton._find_remote_script_dir(repo_root=repo_root, package_dir=package_dir)
+
+        self.assertEqual(found, packaged_remote_script)
 
 
 if __name__ == "__main__":

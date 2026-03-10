@@ -29,6 +29,23 @@ class FakeClient:
     def close(self):
         self.closed = True
 
+    def fileno(self):
+        return -1 if self.closed else 3
+
+    def shutdown(self, _how):
+        self.closed = True
+
+
+class FakeThread:
+    def __init__(self):
+        self.join_calls = []
+
+    def join(self, timeout=None):
+        self.join_calls.append(timeout)
+
+    def is_alive(self):
+        return False
+
 
 class ServerProtocolTests(unittest.TestCase):
     def test_handle_client_processes_multiple_newline_delimited_commands(self):
@@ -57,6 +74,26 @@ class ServerProtocolTests(unittest.TestCase):
         )
         self.assertTrue(all(item.endswith(b"\n") for item in client.sent))
         self.assertTrue(client.closed)
+
+    def test_stop_closes_client_sockets_and_joins_threads(self):
+        server = LiveMCPServer(FakeControlSurface())
+        server._running = True
+        server_socket = FakeClient([])
+        client = FakeClient([])
+        server_thread = FakeThread()
+        client_thread = FakeThread()
+        server._server_socket = server_socket
+        server._server_thread = server_thread
+        server._client_sockets = [client]
+        server._client_threads = [client_thread]
+
+        server.stop()
+
+        self.assertFalse(server._running)
+        self.assertTrue(server_socket.closed)
+        self.assertTrue(client.closed)
+        self.assertEqual(server_thread.join_calls, [2.0])
+        self.assertEqual(client_thread.join_calls, [2.0])
 
 
 if __name__ == "__main__":
