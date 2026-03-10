@@ -288,7 +288,8 @@ def _send_quick_command(command_type: str, params: dict, timeout: float = 2.0) -
 
     This avoids blocking the shared long-timeout connection while Live is quitting.
     """
-    payload = json.dumps({"type": command_type, "params": params}).encode("utf-8")
+    request_id = 1
+    payload = json.dumps({"id": request_id, "type": command_type, "params": params}).encode("utf-8")
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.settimeout(timeout)
         sock.connect((DEFAULT_HOST, DEFAULT_PORT))
@@ -307,6 +308,13 @@ def _send_quick_command(command_type: str, params: dict, timeout: float = 2.0) -
             if not message:
                 raise ConnectionError("Remote script returned an empty response")
             response = json.loads(message.decode("utf-8"))
+            if response.get("id") is not None and response.get("id") != request_id:
+                raise ConnectionError(
+                    "Mismatched response id: expected {0}, got {1}".format(
+                        request_id,
+                        response.get("id"),
+                    )
+                )
             break
 
     if response.get("status") == "error":

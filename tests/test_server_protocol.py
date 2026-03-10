@@ -57,8 +57,8 @@ class ServerProtocolTests(unittest.TestCase):
         server._write_handlers = {}
 
         payload = (
-            b'{"type":"ping","params":{"value":1}}\n'
-            b'{"type":"ping","params":{"value":2}}\n'
+            b'{"id":1,"type":"ping","params":{"value":1}}\n'
+            b'{"id":2,"type":"ping","params":{"value":2}}\n'
         )
         client = FakeClient([payload, b""])
 
@@ -68,12 +68,27 @@ class ServerProtocolTests(unittest.TestCase):
         self.assertEqual(
             responses,
             [
-                {"status": "success", "result": {"pong": 1}},
-                {"status": "success", "result": {"pong": 2}},
+                {"id": 1, "status": "success", "result": {"pong": 1}},
+                {"id": 2, "status": "success", "result": {"pong": 2}},
             ],
         )
         self.assertTrue(all(item.endswith(b"\n") for item in client.sent))
         self.assertTrue(client.closed)
+
+    def test_handle_client_echoes_request_id_on_errors(self):
+        server = LiveMCPServer(FakeControlSurface())
+        server._running = True
+        server._read_handlers = {}
+        server._write_handlers = {}
+        client = FakeClient([b'{"id":9,"type":"missing","params":{}}\n', b""])
+
+        server._handle_client(client)
+
+        responses = [json.loads(item.decode("utf-8")) for item in client.sent]
+        self.assertEqual(
+            responses,
+            [{"id": 9, "status": "error", "error": "Unknown command: missing"}],
+        )
 
     def test_stop_closes_client_sockets_and_joins_threads(self):
         server = LiveMCPServer(FakeControlSurface())
