@@ -46,6 +46,28 @@ def _ensure_macos() -> None:
         raise RuntimeError("Ableton app lifecycle helpers are macOS-only")
 
 
+def _warn_if_install_outdated() -> None:
+    """Warn if the installed Ableton remote script is missing or out of sync."""
+    from .installer import get_install_status
+
+    try:
+        status = get_install_status()
+    except Exception:
+        return
+
+    if not status.get("ableton_found") or not status.get("source_found"):
+        return
+    if status.get("in_sync"):
+        return
+
+    print(
+        "Warning: installed LiveMCP remote script is {0}; run `uv run livemcp --install` "
+        "before restarting if you need the latest Ableton-side code.".format(
+            "missing" if not status.get("installed") else "out of sync"
+        )
+    )
+
+
 def _parse_ableton_label(label: str) -> tuple[tuple[int, ...], int, str]:
     match = re.search(r"Live (\d+(?:\.\d+)*) (.+)", label)
     if not match:
@@ -413,6 +435,7 @@ def wait_for_livemcp_socket(
 def restart_ableton() -> str:
     """Restart Ableton with fresh remote-script bytecode and wait for LiveMCP."""
     app_name = find_ableton_app()
+    _warn_if_install_outdated()
     clear_remote_script_pycache()
     if is_process_running():
         quit_ableton(force=True, app_name=app_name)

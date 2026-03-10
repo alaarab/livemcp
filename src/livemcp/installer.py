@@ -1,5 +1,6 @@
 """Cross-platform installer for the LiveMCP remote script into Ableton Live."""
 
+import hashlib
 import os
 import platform
 import re
@@ -119,6 +120,87 @@ def _remove_old(target_dir):
         abletonmcp.unlink()
     elif abletonmcp.is_dir():
         print("Note: Found AbletonMCP directory. Not removing — delete manually if desired.")
+
+
+def _iter_remote_script_files(path: Path):
+    if not path.is_dir():
+        return []
+    return sorted(
+        file_path
+        for file_path in path.rglob("*")
+        if file_path.is_file() and "__pycache__" not in file_path.parts
+    )
+
+
+def _hash_remote_script_tree(path: Path) -> str | None:
+    files = _iter_remote_script_files(path)
+    if not files:
+        return None
+
+    digest = hashlib.sha256()
+    for file_path in files:
+        digest.update(str(file_path.relative_to(path)).encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(file_path.read_bytes())
+        digest.update(b"\0")
+    return digest.hexdigest()
+
+
+def get_install_status(target_dir: Path | None = None) -> dict:
+    """Return install status for the detected Ableton target."""
+    source = _get_remote_script_source()
+    source_hash = _hash_remote_script_tree(source) if source is not None else None
+    source_file_count = len(_iter_remote_script_files(source)) if source is not None else 0
+
+    platform_name = None
+    if target_dir is None:
+        target_dir, platform_name = _find_ableton()
+
+    dest = target_dir / "LiveMCP" if target_dir is not None else None
+    status = {
+        "ableton_found": target_dir is not None,
+        "target_dir": str(target_dir) if target_dir is not None else None,
+        "platform": platform_name,
+        "source_found": source is not None,
+        "source_path": str(source) if source is not None else None,
+        "source_hash": source_hash,
+        "source_file_count": source_file_count,
+        "dest_path": str(dest) if dest is not None else None,
+        "installed": False,
+        "install_mode": "missing",
+        "installed_hash": None,
+        "installed_file_count": 0,
+        "in_sync": False,
+        "needs_install": True,
+    }
+
+    if source is None or dest is None:
+        return status
+
+    if dest.is_symlink():
+        resolved = dest.resolve()
+        status["installed"] = True
+        status["install_mode"] = "symlink"
+        status["installed_hash"] = _hash_remote_script_tree(resolved)
+        status["installed_file_count"] = len(_iter_remote_script_files(resolved))
+        status["in_sync"] = resolved == source.resolve()
+        status["needs_install"] = not status["in_sync"]
+        return status
+
+    if dest.is_dir():
+        status["installed"] = True
+        status["install_mode"] = "copy"
+        status["installed_hash"] = _hash_remote_script_tree(dest)
+        status["installed_file_count"] = len(_iter_remote_script_files(dest))
+        status["in_sync"] = (
+            status["source_hash"] is not None
+            and status["installed_hash"] is not None
+            and status["source_hash"] == status["installed_hash"]
+        )
+        status["needs_install"] = not status["in_sync"]
+        return status
+
+    return status
 
 
 def install(use_symlink: bool | None = None):

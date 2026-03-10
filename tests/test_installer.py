@@ -79,6 +79,28 @@ class InstallerTests(unittest.TestCase):
         symlink.assert_called_once_with(Path("/tmp/LiveMCP"), Path("/tmp/MIDI Remote Scripts/LiveMCP"))
         copytree.assert_not_called()
 
+    @mock.patch("livemcp.installer._find_ableton")
+    @mock.patch("livemcp.installer._get_remote_script_source")
+    def test_get_install_status_reports_out_of_sync_copy(self, get_remote_script_source, find_ableton):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            source = temp_path / "source"
+            target = temp_path / "target"
+            dest = target / "LiveMCP"
+            source.mkdir(parents=True)
+            dest.mkdir(parents=True)
+            (source / "__init__.py").write_text("a = 1\n", encoding="utf-8")
+            (dest / "__init__.py").write_text("a = 2\n", encoding="utf-8")
+            get_remote_script_source.return_value = source
+            find_ableton.return_value = target, "macos"
+
+            status = installer.get_install_status()
+
+        self.assertTrue(status["installed"])
+        self.assertEqual(status["install_mode"], "copy")
+        self.assertFalse(status["in_sync"])
+        self.assertTrue(status["needs_install"])
+
 
 if __name__ == "__main__":
     unittest.main()

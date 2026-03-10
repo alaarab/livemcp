@@ -55,6 +55,7 @@ def _build_parser() -> argparse.ArgumentParser:
     actions = parser.add_mutually_exclusive_group()
     actions.add_argument("--install", action="store_true", help="Install the LiveMCP remote script")
     actions.add_argument("--uninstall", action="store_true", help="Uninstall the LiveMCP remote script")
+    actions.add_argument("--install-status", action="store_true", help="Show remote-script install status")
     actions.add_argument("--restart-ableton", action="store_true", help="Restart Ableton and wait for LiveMCP")
     actions.add_argument("--launch-ableton", action="store_true", help="Launch Ableton")
     actions.add_argument("--quit-ableton", action="store_true", help="Quit Ableton")
@@ -85,6 +86,11 @@ def main(argv: list[str] | None = None):
         from .installer import install
 
         install(use_symlink=args.symlink_install)
+    elif args.install_status:
+        import json
+        from .installer import get_install_status
+
+        print(json.dumps(get_install_status(), indent=2))
     elif args.uninstall:
         from .installer import uninstall
 

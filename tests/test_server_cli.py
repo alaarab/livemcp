@@ -20,6 +20,14 @@ class ServerCliTests(unittest.TestCase):
         server.main(["--install", "--symlink-install"])
         install.assert_called_once_with(use_symlink=True)
 
+    @mock.patch("livemcp.installer.get_install_status", return_value={"installed": True})
+    def test_main_prints_install_status(self, get_install_status):
+        with mock.patch("sys.stdout", new=io.StringIO()) as stdout:
+            server.main(["--install-status"])
+
+        get_install_status.assert_called_once_with()
+        self.assertIn('"installed": true', stdout.getvalue().lower())
+
     @mock.patch("livemcp.ableton.quit_ableton")
     def test_main_passes_no_force_to_quit_helper(self, quit_ableton):
         with mock.patch("sys.stdout", new=io.StringIO()):
