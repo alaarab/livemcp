@@ -13,9 +13,36 @@ mcp = FastMCP(
     ),
 )
 
+def _collect_tools(*tool_groups):
+    """Flatten tool groups and fail fast on duplicate MCP tool names."""
+    all_tools = []
+    seen = {}
+    for group in tool_groups:
+        for tool in group:
+            tool_name = tool.__name__
+            if tool_name in seen:
+                raise ValueError(
+                    "Duplicate tool registration for '{}' from {} and {}".format(
+                        tool_name,
+                        seen[tool_name].__module__,
+                        tool.__module__,
+                    )
+                )
+            seen[tool_name] = tool
+            all_tools.append(tool)
+    return all_tools
+
+
 # Register all tool functions from each module
-_all_tools = (session.TOOLS + tracks.TOOLS + clips.TOOLS + devices.TOOLS + mixer.TOOLS
-              + arrangement.TOOLS + grooves.TOOLS)
+_all_tools = _collect_tools(
+    session.TOOLS,
+    tracks.TOOLS,
+    clips.TOOLS,
+    devices.TOOLS,
+    mixer.TOOLS,
+    arrangement.TOOLS,
+    grooves.TOOLS,
+)
 
 for _fn in _all_tools:
     mcp.tool()(_fn)

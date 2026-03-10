@@ -21,6 +21,7 @@ PROCESS_NAME = "Live"
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 9877
 RECV_SIZE = 8192
+MESSAGE_TERMINATOR = b"\n"
 RECOVERY_FILES = [
     "CrashRecoveryInfo.cfg",
     "CrashDetection.cfg",
@@ -244,7 +245,7 @@ def _send_quick_command(command_type: str, params: dict, timeout: float = 2.0) -
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.settimeout(timeout)
         sock.connect((DEFAULT_HOST, DEFAULT_PORT))
-        sock.sendall(payload)
+        sock.sendall(payload + MESSAGE_TERMINATOR)
 
         buffer = b""
         while True:
@@ -252,11 +253,14 @@ def _send_quick_command(command_type: str, params: dict, timeout: float = 2.0) -
             if not chunk:
                 raise ConnectionError("Remote script closed the connection")
             buffer += chunk
-            try:
-                response = json.loads(buffer.decode("utf-8"))
-                break
-            except (json.JSONDecodeError, UnicodeDecodeError):
+            if MESSAGE_TERMINATOR not in buffer:
                 continue
+
+            message, _, _ = buffer.partition(MESSAGE_TERMINATOR)
+            if not message:
+                raise ConnectionError("Remote script returned an empty response")
+            response = json.loads(message.decode("utf-8"))
+            break
 
     if response.get("status") == "error":
         error_msg = response.get("error") or response.get("message", "Unknown error")
