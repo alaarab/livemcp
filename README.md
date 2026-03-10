@@ -1,8 +1,8 @@
 # LiveMCP
 
-MCP server that exposes Ableton Live's internal Python API to AI assistants. 171 tools across 7 categories: session, clips, tracks, devices, mixer, arrangement, grooves.
+MCP server that exposes Ableton Live's internal Python API to AI assistants. 199 tools across 7 categories: session, clips, tracks, devices, mixer, arrangement, grooves.
 
-[![Tools](https://img.shields.io/badge/Tools-171-blueviolet)](https://github.com/alaarab/livemcp) [![Python](https://img.shields.io/badge/Python-3.10+-3776AB)](https://python.org) [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+[![Tools](https://img.shields.io/badge/Tools-199-blueviolet)](https://github.com/alaarab/livemcp) [![Python](https://img.shields.io/badge/Python-3.10+-3776AB)](https://python.org) [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
 ## Quick Start
 
@@ -63,17 +63,17 @@ Config file locations:
 
 | Category | Count |
 |----------|------:|
-| Session | 52 |
-| Clips | 39 |
-| Tracks | 28 |
-| Devices | 24 |
+| Session | 72 |
+| Clips | 40 |
+| Tracks | 32 |
+| Devices | 27 |
 | Mixer | 14 |
 | Arrangement | 9 |
 | Grooves | 5 |
-| **Total** | **171** |
+| **Total** | **199** |
 
 <details>
-<summary>Session Tools (52)</summary>
+<summary>Session Tools (72)</summary>
 
 | Tool | Description |
 |------|-------------|
@@ -83,8 +83,12 @@ Config file locations:
 | `set_tempo` | Set BPM |
 | `start_playback` / `stop_playback` / `continue_playing` | Transport controls |
 | `stop_all_clips` | Stop all playing clips |
-| `trigger_record` | Toggle recording |
-| `get_record_mode` / `set_record_mode` | Session recording on/off |
+| `trigger_record` | Toggle session recording |
+| `get_record_mode` / `set_record_mode` | Arrangement recording on/off |
+| `get_link_state` / `set_ableton_link_enabled` / `set_ableton_link_start_stop_sync_enabled` | Ableton Link and Start/Stop Sync |
+| `set_tempo_follower_enabled` | Tempo Follower on/off |
+| `get_count_in_state` | Count-in duration and active count-in state |
+| `get_session_record_status` / `set_session_record` | Session Record state and status |
 | `set_time_signature` | Numerator and denominator |
 | `set_loop_region` | Loop on/off, start, length |
 | `undo` / `redo` | Undo/redo |
@@ -106,8 +110,16 @@ Config file locations:
 | `fire_scene` / `duplicate_scene` / `delete_scene` / `create_scene` | Scene management |
 | `set_groove_amount` / `set_scale` | Global groove and scale |
 | `get_application_info` | Live version (major, minor, bugfix) |
+| `get_application_dialog` / `press_current_dialog_button` | Inspect and control Ableton dialog boxes |
+| `get_application_cpu_usage` | Average and peak Live CPU usage |
+| `get_available_main_views` / `is_view_visible` | Discover valid view names and visibility |
+| `show_view` / `hide_view` / `focus_view` | Control Ableton UI views |
+| `toggle_browse` | Toggle browser hot-swap mode |
 | `get_session_metadata` | Song time, length, CPU load |
-| `get_view_state` | Current view, follow song, draw mode |
+| `get_view_state` | Current view, follow song, draw mode, visible views |
+| `get_selected_device` / `select_device` | Read and change selected device |
+| `get_selected_parameter` | Inspect the selected parameter |
+| `get_selected_chain` | Inspect the selected rack chain |
 | `set_follow_song` / `set_draw_mode` | Toggle view options |
 | `select_clip_in_detail` | Open clip in Detail View |
 | `get_punch_state` / `set_punch_in` / `set_punch_out` | Punch in/out |
@@ -118,11 +130,11 @@ Config file locations:
 </details>
 
 <details>
-<summary>Clip Tools (39)</summary>
+<summary>Clip Tools (40)</summary>
 
 | Tool | Description |
 |------|-------------|
-| `create_clip` / `delete_clip` / `duplicate_clip` | Clip CRUD |
+| `create_clip` / `create_session_audio_clip` / `delete_clip` / `duplicate_clip` | Clip CRUD |
 | `fire_clip` / `stop_clip` | Launch and stop clips |
 | `get_clip_properties` | Full clip info (type, length, loop, markers) |
 | `set_clip_properties` | Batch set name, color, mute, gain, pitch, loop points |
@@ -147,7 +159,7 @@ Config file locations:
 </details>
 
 <details>
-<summary>Track Tools (28)</summary>
+<summary>Track Tools (32)</summary>
 
 | Tool | Description |
 |------|-------------|
@@ -165,11 +177,13 @@ Config file locations:
 | `get_track_output_meter` | Real-time output level |
 | `get_clip_slot_status` | Playing, recording, triggered state |
 | `set_clip_slot_color` | Clip slot color |
+| `get_take_lanes` / `create_take_lane` | Take-lane inspection and creation |
+| `create_take_lane_midi_clip` / `create_take_lane_audio_clip` | Create clips inside take lanes |
 
 </details>
 
 <details>
-<summary>Device Tools (24)</summary>
+<summary>Device Tools (27)</summary>
 
 | Tool | Description |
 |------|-------------|
@@ -182,7 +196,8 @@ Config file locations:
 | `get_master_device_parameters` / `set_master_device_parameter` | Master track devices |
 | `get_return_device_parameters` / `set_return_device_parameter` | Return track devices |
 | `get_master_track_devices` / `get_return_track_devices` | List devices |
-| `get_rack_chains` | Rack chain contents |
+| `get_rack_chains` / `set_chain_mixer_value` | Rack chain contents, activator, pan, volume, sends |
+| `get_drum_chains` / `set_drum_chain_property` | Drum-chain note routing and choke settings |
 | `get_drum_pads` / `set_drum_pad_mute` / `set_drum_pad_solo` | Drum rack pads |
 | `delete_device` / `delete_master_device` / `delete_return_device` | Remove devices |
 | `move_device` / `enable_device` | Reorder and enable/disable |
@@ -248,7 +263,7 @@ Config file locations:
 │                   MCP Server                             │
 │            src/livemcp/ (FastMCP)                        │
 │                                                          │
-│   171 tool functions with type hints + docstrings        │
+│   199 tool functions with type hints + docstrings        │
 │   7 modules: session, tracks, clips, devices,            │
 │              mixer, arrangement, grooves                 │
 └────────────────────────┬────────────────────────────────┘
@@ -301,10 +316,10 @@ livemcp/
 │   ├── server.py             # FastMCP app, registers all tool modules
 │   ├── connection.py         # TCP client to remote script
 │   └── tools/                # 7 tool modules
-│       ├── session.py        # 52 session tools
+│       ├── session.py        # 72 session tools
 │       ├── clips.py          # 40 clip tools
-│       ├── tracks.py         # 28 track tools
-│       ├── devices.py        # 24 device tools
+│       ├── tracks.py         # 32 track tools
+│       ├── devices.py        # 27 device tools
 │       ├── mixer.py          # 14 mixer tools
 │       ├── arrangement.py    # 9 arrangement tools
 │       └── grooves.py        # 5 groove tools
@@ -331,7 +346,6 @@ These are Ableton Live API limitations, not LiveMCP bugs:
 | Stem Separation | Not in API | UI-only feature (Live 12.3+) |
 | Track Freeze/Flatten | Read-only | Can check `is_frozen`, cannot trigger freeze |
 | Warp Markers | Read-only | Cannot add/move/delete warp markers |
-| Audio Clips in Session | Cannot create | Only MIDI clips; audio clips work in Arrangement |
 | Automation Envelopes | Limited | Can sample/insert values, cannot create from scratch |
 | Group Tracks | Cannot create | Can read group info, cannot create groups |
 | Groove Removal | API bug | `clip.groove = None` crashes; raises informative error |

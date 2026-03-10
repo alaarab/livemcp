@@ -21,6 +21,22 @@ def create_clip(track_index: int, clip_index: int, length: float = 4.0) -> str:
     return json.dumps(result)
 
 
+def create_session_audio_clip(track_index: int, clip_index: int, file_path: str) -> str:
+    """Create a new audio clip in a clip slot from an audio file.
+
+    Args:
+        track_index: Zero-based index of the track.
+        clip_index: Zero-based index of the clip slot.
+        file_path: Absolute path to the audio file to load.
+    """
+    result = get_connection().send_command("create_session_audio_clip", {
+        "track_index": track_index,
+        "clip_index": clip_index,
+        "file_path": file_path,
+    })
+    return json.dumps(result)
+
+
 def set_clip_name(track_index: int, clip_index: int, name: str) -> str:
     """Set the name of a clip.
 
@@ -817,6 +833,7 @@ def set_clip_properties(
 
 TOOLS = [
     create_clip,
+    create_session_audio_clip,
     set_clip_name,
     delete_clip,
     add_notes_to_clip,

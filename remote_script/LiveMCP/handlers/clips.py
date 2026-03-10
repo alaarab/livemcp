@@ -78,6 +78,33 @@ def create_clip(control_surface, params):
     }
 
 
+def create_session_audio_clip(control_surface, params):
+    """Create a new audio clip in a clip slot from an audio file."""
+    song = control_surface.song()
+    track, slot, existing_clip = _get_track_and_clip(song, params)
+    file_path = params.get("file_path")
+    if file_path is None:
+        raise ValueError("Missing required parameter: file_path")
+    if existing_clip is not None:
+        raise ValueError("Clip slot already contains a clip")
+    if not track.has_audio_input:
+        raise ValueError("Track {0} is not an audio track".format(int(params["track_index"])))
+
+    slot.create_audio_clip(str(file_path))
+    clip = slot.clip if slot.has_clip else None
+    if clip is None:
+        raise ValueError("Ableton did not create an audio clip in the clip slot")
+
+    return {
+        "track_index": int(params["track_index"]),
+        "clip_index": int(params["clip_index"]),
+        "name": clip.name,
+        "length": clip.length,
+        "is_audio_clip": clip.is_audio_clip,
+        "file_path": str(file_path),
+    }
+
+
 def set_clip_name(control_surface, params):
     """Set the name of a clip."""
     song = control_surface.song()
@@ -1087,6 +1114,7 @@ READ_HANDLERS = {
 
 WRITE_HANDLERS = {
     "create_clip": create_clip,
+    "create_session_audio_clip": create_session_audio_clip,
     "set_clip_name": set_clip_name,
     "delete_clip": delete_clip,
     "add_notes_to_clip": add_notes_to_clip,

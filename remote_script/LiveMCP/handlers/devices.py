@@ -30,6 +30,62 @@ def _get_device(song, params):
     return track, track.devices[device_index]
 
 
+def _serialize_parameter_value(param):
+    """Serialize a device parameter for transport over MCP."""
+    result = {
+        "name": param.name,
+        "value": param.value,
+        "min": param.min,
+        "max": param.max,
+        "is_quantized": param.is_quantized,
+    }
+    try:
+        result["display_value"] = str(param)
+    except Exception:
+        result["display_value"] = str(param.value)
+    return result
+
+
+def _serialize_chain(chain, chain_index):
+    """Serialize a rack or drum chain, including mixer state."""
+    mixer = chain.mixer_device
+    result = {
+        "index": chain_index,
+        "name": chain.name,
+        "mute": chain.mute,
+        "solo": chain.solo,
+        "pan": mixer.panning.value,
+        "volume": mixer.volume.value,
+        "sends": [
+            {"index": i, **_serialize_parameter_value(send)}
+            for i, send in enumerate(mixer.sends)
+        ],
+    }
+    if hasattr(mixer, "chain_activator"):
+        result["chain_activator"] = _serialize_parameter_value(mixer.chain_activator)
+    for property_name in ("in_note", "out_note", "choke_group"):
+        if hasattr(chain, property_name):
+            result[property_name] = getattr(chain, property_name)
+    return result
+
+
+def _get_chain(song, params):
+    """Validate and return a chain from track/device/chain indices."""
+    track, device = _get_device(song, params)
+    if not device.can_have_chains:
+        raise ValueError("Device '{0}' does not support chains".format(device.name))
+
+    chain_index = params.get("chain_index")
+    if chain_index is None:
+        raise ValueError("Missing required parameter: chain_index")
+    chain_index = int(chain_index)
+    chains = list(device.chains)
+    if chain_index < 0 or chain_index >= len(chains):
+        raise ValueError("Chain index {0} out of range (0-{1})".format(
+            chain_index, len(chains) - 1))
+    return track, device, chain_index, chains[chain_index]
+
+
 def get_browser_tree(control_surface, params):
     """Get hierarchical browser tree. category_type: 'all', 'instruments', 'sounds', 'drums', 'audio_effects', 'midi_effects'."""
     browser = control_surface.application().browser
@@ -299,20 +355,119 @@ def get_rack_chains(control_surface, params):
     track, device = _get_device(song, params)
     if not device.can_have_chains:
         raise ValueError("Device '{0}' does not support chains".format(device.name))
-    chains = []
-    for i, chain in enumerate(device.chains):
-        chains.append({
-            "index": i,
-            "name": chain.name,
-            "mute": chain.mute,
-            "solo": chain.solo,
-            "volume": chain.mixer_device.volume.value,
-        })
     return {
         "track_index": int(params["track_index"]),
         "device_index": int(params["device_index"]),
         "device_name": device.name,
-        "chains": chains,
+        "chains": [_serialize_chain(chain, i) for i, chain in enumerate(device.chains)],
+    }
+
+
+def set_chain_mixer_value(control_surface, params):
+    """Set a rack chain mixer parameter."""
+    song = control_surface.song()
+    track, device, chain_index, chain = _get_chain(song, params)
+    parameter_name = params.get("parameter_name")
+    value = params.get("value")
+    if parameter_name is None:
+        raise ValueError("Missing required parameter: parameter_name")
+    if value is None:
+        raise ValueError("Missing required parameter: value")
+
+    normalized = str(parameter_name).strip().lower().replace("-", "_").replace(" ", "_")
+    mixer = chain.mixer_device
+    if normalized in ("pan", "panning"):
+        param = mixer.panning
+        target_name = "pan"
+    elif normalized == "volume":
+        param = mixer.volume
+        target_name = "volume"
+    elif normalized in ("chain_activator", "activator", "enabled", "on"):
+        if not hasattr(mixer, "chain_activator"):
+            raise ValueError("Chain activator is not available on this Live version")
+        param = mixer.chain_activator
+        target_name = "chain_activator"
+    elif normalized in ("send", "sends"):
+        send_index = params.get("send_index")
+        if send_index is None:
+            raise ValueError("Missing required parameter: send_index")
+        send_index = int(send_index)
+        if send_index < 0 or send_index >= len(mixer.sends):
+            raise ValueError("Send index {0} out of range (0-{1})".format(
+                send_index, len(mixer.sends) - 1))
+        param = mixer.sends[send_index]
+        target_name = "send"
+    else:
+        raise ValueError(
+            "Unsupported parameter_name '{}'. Expected one of: chain_activator, pan, volume, send".format(
+                parameter_name
+            )
+        )
+
+    value = float(value)
+    if value < param.min or value > param.max:
+        raise ValueError("Value {0} out of range ({1}-{2})".format(value, param.min, param.max))
+    param.value = value
+
+    result = {
+        "track_index": int(params["track_index"]),
+        "device_index": int(params["device_index"]),
+        "chain_index": chain_index,
+        "parameter_name": target_name,
+        "value": param.value,
+    }
+    if target_name == "send":
+        result["send_index"] = int(params["send_index"])
+    return result
+
+
+def get_drum_chains(control_surface, params):
+    """List drum-chain-specific properties from a drum rack."""
+    song = control_surface.song()
+    track, device = _get_device(song, params)
+    if not device.can_have_drum_pads:
+        raise ValueError("Device '{0}' is not a drum rack".format(device.name))
+    return {
+        "track_index": int(params["track_index"]),
+        "device_index": int(params["device_index"]),
+        "device_name": device.name,
+        "drum_chains": [_serialize_chain(chain, i) for i, chain in enumerate(device.chains)],
+    }
+
+
+def set_drum_chain_property(control_surface, params):
+    """Set a drum-chain-specific property."""
+    song = control_surface.song()
+    track, device, chain_index, chain = _get_chain(song, params)
+    if not device.can_have_drum_pads:
+        raise ValueError("Device '{0}' is not a drum rack".format(device.name))
+
+    property_name = params.get("property_name")
+    value = params.get("value")
+    if property_name is None:
+        raise ValueError("Missing required parameter: property_name")
+    if value is None:
+        raise ValueError("Missing required parameter: value")
+
+    normalized = str(property_name).strip().lower()
+    if normalized not in ("in_note", "out_note", "choke_group"):
+        raise ValueError(
+            "Unsupported property_name '{}'. Expected one of: in_note, out_note, choke_group".format(
+                property_name
+            )
+        )
+    if not hasattr(chain, normalized):
+        raise ValueError(
+            "Property '{}' is not available on this Live version or chain type".format(normalized)
+        )
+
+    setattr(chain, normalized, int(value))
+    return {
+        "track_index": int(params["track_index"]),
+        "device_index": int(params["device_index"]),
+        "chain_index": chain_index,
+        "property_name": normalized,
+        "value": getattr(chain, normalized),
     }
 
 
@@ -606,6 +761,7 @@ READ_HANDLERS = {
     "get_master_device_parameters": get_master_device_parameters,
     "get_return_device_parameters": get_return_device_parameters,
     "get_rack_chains": get_rack_chains,
+    "get_drum_chains": get_drum_chains,
     "get_drum_pads": get_drum_pads,
 }
 
@@ -618,6 +774,8 @@ WRITE_HANDLERS = {
     "load_device_on_return": load_device_on_return,
     "set_master_device_parameter": set_master_device_parameter,
     "set_return_device_parameter": set_return_device_parameter,
+    "set_chain_mixer_value": set_chain_mixer_value,
+    "set_drum_chain_property": set_drum_chain_property,
     "set_drum_pad_mute": set_drum_pad_mute,
     "set_drum_pad_solo": set_drum_pad_solo,
     "delete_master_device": delete_master_device,

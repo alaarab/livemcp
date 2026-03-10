@@ -167,7 +167,8 @@ def get_device_display_values(track_index: int, device_index: int) -> str:
 def get_rack_chains(track_index: int, device_index: int) -> str:
     """Get all chains in an instrument or effect rack device.
 
-    The device must support chains (i.e. be a rack). Returns chain name, mute, solo, and volume.
+    The device must support chains (i.e. be a rack). Returns chain name, mute, solo,
+    chain activator, pan, volume, and sends.
 
     Args:
         track_index: Zero-based index of the track.
@@ -176,6 +177,79 @@ def get_rack_chains(track_index: int, device_index: int) -> str:
     result = get_connection().send_command("get_rack_chains", {
         "track_index": track_index,
         "device_index": device_index,
+    })
+    return json.dumps(result)
+
+
+def set_chain_mixer_value(
+    track_index: int,
+    device_index: int,
+    chain_index: int,
+    parameter_name: str,
+    value: float,
+    send_index: int = None,
+) -> str:
+    """Set a rack chain mixer parameter.
+
+    Args:
+        track_index: Zero-based index of the track.
+        device_index: Zero-based index of the rack device.
+        chain_index: Zero-based index of the chain.
+        parameter_name: One of 'chain_activator', 'pan', 'volume', or 'send'.
+        value: New value for the target parameter.
+        send_index: Zero-based send index when parameter_name is 'send'.
+    """
+    params = {
+        "track_index": track_index,
+        "device_index": device_index,
+        "chain_index": chain_index,
+        "parameter_name": parameter_name,
+        "value": value,
+    }
+    if send_index is not None:
+        params["send_index"] = send_index
+    result = get_connection().send_command("set_chain_mixer_value", params)
+    return json.dumps(result)
+
+
+def get_drum_chains(track_index: int, device_index: int) -> str:
+    """Get drum-chain-specific properties from a Drum Rack.
+
+    Returns each chain's name, mixer values, and drum-specific note/choke settings.
+
+    Args:
+        track_index: Zero-based index of the track.
+        device_index: Zero-based index of the drum rack device.
+    """
+    result = get_connection().send_command("get_drum_chains", {
+        "track_index": track_index,
+        "device_index": device_index,
+    })
+    return json.dumps(result)
+
+
+def set_drum_chain_property(
+    track_index: int,
+    device_index: int,
+    chain_index: int,
+    property_name: str,
+    value: int,
+) -> str:
+    """Set a drum-chain-specific property.
+
+    Args:
+        track_index: Zero-based index of the track.
+        device_index: Zero-based index of the drum rack device.
+        chain_index: Zero-based index of the drum chain.
+        property_name: One of 'in_note', 'out_note', or 'choke_group'.
+        value: Integer value for the target property.
+    """
+    result = get_connection().send_command("set_drum_chain_property", {
+        "track_index": track_index,
+        "device_index": device_index,
+        "chain_index": chain_index,
+        "property_name": property_name,
+        "value": value,
     })
     return json.dumps(result)
 
@@ -387,6 +461,9 @@ TOOLS = [
     get_master_device_parameters,
     get_return_device_parameters,
     get_rack_chains,
+    set_chain_mixer_value,
+    get_drum_chains,
+    set_drum_chain_property,
     get_drum_pads,
     delete_device,
     load_device_on_master,

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import platform
 import re
 import shutil
@@ -19,6 +20,7 @@ APP_CANDIDATES = [
 PROCESS_NAME = "Live"
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 9877
+RECV_SIZE = 8192
 RECOVERY_FILES = [
     "CrashRecoveryInfo.cfg",
     "CrashDetection.cfg",
@@ -34,6 +36,7 @@ STARTUP_DIALOG_BUTTONS = [
     "Yes",
     "OK",
 ]
+FORCE_QUIT_TIMEOUT = 5.0
 
 
 def _ensure_macos() -> None:
@@ -116,6 +119,14 @@ def _run_osascript(script: str) -> subprocess.CompletedProcess[str]:
     )
 
 
+def _launch_osascript(script: str) -> subprocess.Popen[bytes]:
+    return subprocess.Popen(
+        ["osascript", "-e", script],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+
+
 def _quote_applescript_list(values: list[str]) -> str:
     escaped = [value.replace('"', '\\"') for value in values]
     return "{" + ", ".join(f'"{value}"' for value in escaped) + "}"
@@ -191,6 +202,28 @@ def wait_for_dialog(button_names: list[str], timeout: float, poll_interval: floa
     return None
 
 
+def _dismiss_quit_dialog_via_livemcp(
+    timeout: float = 8,
+    poll_interval: float = 1.0,
+) -> bool:
+    """Dismiss Ableton's in-app quit prompt over the LiveMCP socket when available."""
+    deadline = time.time() + timeout
+
+    while time.time() < deadline:
+        try:
+            _send_quick_command("press_current_dialog_button", {"index": 0}, timeout=2.0)
+            return True
+        except RuntimeError as exc:
+            if "No dialog is currently open" not in str(exc):
+                pass
+        except Exception:
+            pass
+
+        time.sleep(poll_interval)
+
+    return False
+
+
 def is_process_running() -> bool:
     """Return whether Ableton's Live process is currently running."""
     result = subprocess.run(
@@ -200,6 +233,36 @@ def is_process_running() -> bool:
         text=True,
     )
     return result.returncode == 0
+
+
+def _send_quick_command(command_type: str, params: dict, timeout: float = 2.0) -> dict:
+    """Send a one-off LiveMCP command with a short timeout.
+
+    This avoids blocking the shared long-timeout connection while Live is quitting.
+    """
+    payload = json.dumps({"type": command_type, "params": params}).encode("utf-8")
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.settimeout(timeout)
+        sock.connect((DEFAULT_HOST, DEFAULT_PORT))
+        sock.sendall(payload)
+
+        buffer = b""
+        while True:
+            chunk = sock.recv(RECV_SIZE)
+            if not chunk:
+                raise ConnectionError("Remote script closed the connection")
+            buffer += chunk
+            try:
+                response = json.loads(buffer.decode("utf-8"))
+                break
+            except (json.JSONDecodeError, UnicodeDecodeError):
+                continue
+
+    if response.get("status") == "error":
+        error_msg = response.get("error") or response.get("message", "Unknown error")
+        raise RuntimeError(error_msg)
+
+    return response.get("result", {})
 
 
 def wait_for_process_exit(timeout: float) -> bool:
@@ -225,17 +288,39 @@ def launch_ableton() -> str:
 def quit_ableton(force: bool = True) -> None:
     """Quit Ableton and dismiss save prompts."""
     app_name = find_ableton_app()
-    _run_osascript(f'tell application "{app_name}" to quit')
-    time.sleep(2)
-    wait_for_dialog(QUIT_DIALOG_BUTTONS, timeout=8)
+    _launch_osascript(f'tell application "{app_name}" to quit')
+    time.sleep(0.5)
 
-    exit_timeout = 5 if force else 15
-    if wait_for_process_exit(timeout=exit_timeout):
+    exit_timeout = FORCE_QUIT_TIMEOUT if force else 15
+    deadline = time.time() + exit_timeout
+    last_ui_error = ""
+    while time.time() < deadline:
+        if not is_process_running():
+            return
+
+        if _dismiss_quit_dialog_via_livemcp(timeout=2.5, poll_interval=0.2):
+            time.sleep(0.25)
+            continue
+
+        try:
+            if wait_for_dialog(QUIT_DIALOG_BUTTONS, timeout=0.5, poll_interval=0.1):
+                time.sleep(0.25)
+                continue
+        except RuntimeError as exc:
+            last_ui_error = str(exc)
+
+        time.sleep(0.1)
+
+    if not is_process_running():
         return
 
     if force:
         force_kill()
         time.sleep(2)
+        return
+
+    if last_ui_error:
+        raise RuntimeError(last_ui_error)
 
 
 def wait_for_livemcp_socket(

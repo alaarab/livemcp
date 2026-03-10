@@ -393,6 +393,74 @@ def set_track_properties(
     return json.dumps(result)
 
 
+def get_take_lanes(track_index: int) -> str:
+    """Get all take lanes for a track.
+
+    Returns take lane names and arrangement clips for each lane.
+
+    Args:
+        track_index: Zero-based index of the track.
+    """
+    result = get_connection().send_command("get_take_lanes", {"track_index": track_index})
+    return json.dumps(result)
+
+
+def create_take_lane(track_index: int) -> str:
+    """Create a new take lane on a track.
+
+    Args:
+        track_index: Zero-based index of the track.
+    """
+    result = get_connection().send_command("create_take_lane", {"track_index": track_index})
+    return json.dumps(result)
+
+
+def create_take_lane_midi_clip(
+    track_index: int,
+    take_lane_index: int,
+    start_time: float,
+    length: float,
+) -> str:
+    """Create a MIDI clip inside a take lane.
+
+    Args:
+        track_index: Zero-based index of the track.
+        take_lane_index: Zero-based index of the take lane.
+        start_time: Clip start position in beats.
+        length: Clip length in beats.
+    """
+    result = get_connection().send_command("create_take_lane_midi_clip", {
+        "track_index": track_index,
+        "take_lane_index": take_lane_index,
+        "start_time": start_time,
+        "length": length,
+    })
+    return json.dumps(result)
+
+
+def create_take_lane_audio_clip(
+    track_index: int,
+    take_lane_index: int,
+    file_path: str,
+    start_time: float,
+) -> str:
+    """Create an audio clip inside a take lane from an audio file.
+
+    Args:
+        track_index: Zero-based index of the track.
+        take_lane_index: Zero-based index of the take lane.
+        file_path: Absolute path to the audio file to load.
+        start_time: Clip start position in beats.
+    """
+    result = get_connection().send_command("create_take_lane_audio_clip", {
+        "track_index": track_index,
+        "take_lane_index": take_lane_index,
+        "file_path": file_path,
+        "start_time": start_time,
+    })
+    return json.dumps(result)
+
+
 TOOLS = [
     get_track_info,
     create_midi_track,
@@ -422,4 +490,8 @@ TOOLS = [
     set_clip_slot_color,
     set_return_track_send,
     set_track_properties,
+    get_take_lanes,
+    create_take_lane,
+    create_take_lane_midi_clip,
+    create_take_lane_audio_clip,
 ]
