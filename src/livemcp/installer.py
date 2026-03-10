@@ -12,7 +12,7 @@ EDITIONS = ["Live 12 Suite", "Live 12 Standard", "Live 11 Suite"]
 def _get_remote_script_source():
     """Find the bundled remote script inside the installed package."""
     pkg_dir = Path(__file__).resolve().parent
-    # When installed via pip/uvx, files are at livemcp/remote_script/
+    # When installed via pip/uvx, wheel data is forced into livemcp/remote_script/
     bundled = pkg_dir / "remote_script"
     if bundled.is_dir():
         return bundled

@@ -9,25 +9,36 @@ from .arrangement import READ_HANDLERS as ARRANGEMENT_READ, WRITE_HANDLERS as AR
 from .grooves import READ_HANDLERS as GROOVES_READ, WRITE_HANDLERS as GROOVES_WRITE
 
 
-def get_all_read_handlers():
+def _merge_handler_dicts(*handler_sets):
+    """Merge handler dicts and fail fast on duplicate command names."""
     handlers = {}
-    handlers.update(SESSION_READ)
-    handlers.update(TRACKS_READ)
-    handlers.update(CLIPS_READ)
-    handlers.update(DEVICES_READ)
-    handlers.update(MIXER_READ)
-    handlers.update(ARRANGEMENT_READ)
-    handlers.update(GROOVES_READ)
+    for handler_set in handler_sets:
+        overlaps = sorted(set(handlers).intersection(handler_set))
+        if overlaps:
+            raise ValueError("Duplicate handler registrations: {}".format(", ".join(overlaps)))
+        handlers.update(handler_set)
     return handlers
+
+
+def get_all_read_handlers():
+    return _merge_handler_dicts(
+        SESSION_READ,
+        TRACKS_READ,
+        CLIPS_READ,
+        DEVICES_READ,
+        MIXER_READ,
+        ARRANGEMENT_READ,
+        GROOVES_READ,
+    )
 
 
 def get_all_write_handlers():
-    handlers = {}
-    handlers.update(SESSION_WRITE)
-    handlers.update(TRACKS_WRITE)
-    handlers.update(CLIPS_WRITE)
-    handlers.update(DEVICES_WRITE)
-    handlers.update(MIXER_WRITE)
-    handlers.update(ARRANGEMENT_WRITE)
-    handlers.update(GROOVES_WRITE)
-    return handlers
+    return _merge_handler_dicts(
+        SESSION_WRITE,
+        TRACKS_WRITE,
+        CLIPS_WRITE,
+        DEVICES_WRITE,
+        MIXER_WRITE,
+        ARRANGEMENT_WRITE,
+        GROOVES_WRITE,
+    )

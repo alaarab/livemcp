@@ -38,5 +38,8 @@ Repository = "https://github.com/alaarab/livemcp"
 [tool.hatchling.build]
 packages = ["src/livemcp"]
 
+[tool.hatch.build.targets.wheel.force-include]
+"remote_script/LiveMCP" = "livemcp/remote_script"
+
 [tool.ruff]
 line-length = 100

@@ -11,6 +11,7 @@ from .handlers import get_all_read_handlers, get_all_write_handlers
 PORT = 9877
 RECV_SIZE = 8192
 RESPONSE_TIMEOUT = 15.0
+MESSAGE_TERMINATOR = b"\n"
 
 
 class LiveMCPServer:
@@ -73,25 +74,32 @@ class LiveMCPServer:
 
     def _handle_client(self, client):
         """Handle a single client connection."""
-        buffer = ""
+        buffer = b""
         try:
             while self._running:
                 data = client.recv(RECV_SIZE)
                 if not data:
                     break
-                buffer += data.decode("utf-8")
-                try:
-                    command = json.loads(buffer)
-                    buffer = ""
-                except (json.JSONDecodeError, ValueError):
-                    continue
+                buffer += data
 
-                try:
-                    response = self._dispatch(command)
-                    self._send_json(client, {"status": "success", "result": response})
-                except Exception as e:
-                    self.log("Command error: {0}\n{1}".format(e, traceback.format_exc()))
-                    self._send_json(client, {"status": "error", "error": str(e)})
+                while MESSAGE_TERMINATOR in buffer:
+                    payload, _, buffer = buffer.partition(MESSAGE_TERMINATOR)
+                    if not payload.strip():
+                        continue
+
+                    try:
+                        command = json.loads(payload.decode("utf-8"))
+                    except (json.JSONDecodeError, ValueError) as e:
+                        self.log("Invalid JSON payload: {0}\n{1}".format(e, traceback.format_exc()))
+                        self._send_json(client, {"status": "error", "error": "Invalid JSON payload"})
+                        continue
+
+                    try:
+                        response = self._dispatch(command)
+                        self._send_json(client, {"status": "success", "result": response})
+                    except Exception as e:
+                        self.log("Command error: {0}\n{1}".format(e, traceback.format_exc()))
+                        self._send_json(client, {"status": "error", "error": str(e)})
         except Exception as e:
             self.log("Client error: {0}".format(e))
         finally:
@@ -102,8 +110,8 @@ class LiveMCPServer:
 
     def _send_json(self, client, data):
         """Send a JSON response to the client."""
-        payload = json.dumps(data)
-        client.sendall(payload.encode("utf-8"))
+        payload = json.dumps(data).encode("utf-8") + MESSAGE_TERMINATOR
+        client.sendall(payload)
 
     def _dispatch(self, command):
         """Route a command to the appropriate handler."""
