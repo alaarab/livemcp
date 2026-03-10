@@ -1,7 +1,9 @@
 """Session-level tools: tempo, transport, time signature."""
 
 import json
-from typing import Optional
+from typing import Any, Optional
+
+from typing_extensions import TypedDict
 
 from .. import __version__
 from ..connection import get_connection, probe_command
@@ -9,23 +11,201 @@ from ..installer import get_install_status
 from ..protocol import TRANSPORT_PROTOCOL_VERSION
 
 
-def get_session_info() -> str:
+class SessionInfo(TypedDict, total=False):
+    tempo: float
+    time_signature_numerator: int
+    time_signature_denominator: int
+    track_count: int
+    return_track_count: int
+    master_volume: float
+    master_pan: float
+    is_playing: bool
+    loop: bool
+    loop_start: float
+    loop_length: float
+
+
+class SongTimeInfo(TypedDict):
+    current_song_time: float
+    can_undo: bool
+    can_redo: bool
+
+
+class SelectedTrackInfo(TypedDict, total=False):
+    index: int
+    name: str
+    type: str
+    mute: bool
+    solo: bool
+    arm: bool
+    color: int
+
+
+class SelectedSceneInfo(TypedDict, total=False):
+    index: int
+    name: str
+    color: int
+
+
+class ApplicationInfo(TypedDict):
+    major_version: int
+    minor_version: int
+    bugfix_version: int
+
+
+class LiveMCPInfo(TypedDict, total=False):
+    protocol_version: int
+    supports_request_ids: bool
+    transport: str
+
+
+class InstallStatusInfo(TypedDict, total=False):
+    installed: bool
+    needs_install: bool
+    install_mode: str
+    in_sync: bool
+    installed_path: str
+    source_path: str
+    versioned_paths: list[dict[str, Any]]
+
+
+class LiveMCPStatus(TypedDict, total=False):
+    package_version: str
+    client_protocol_version: int
+    install_status: InstallStatusInfo
+    remote_reachable: bool
+    remote_info: Optional[LiveMCPInfo]
+    cached_server_info: Optional[LiveMCPInfo]
+    remote_error: Optional[str]
+    warnings: list[str]
+
+
+class ApplicationDialogInfo(TypedDict, total=False):
+    open_dialog_count: int
+    current_dialog_message: str
+    current_dialog_button_count: int
+
+
+class MainViewsInfo(TypedDict):
+    view_names: list[str]
+
+
+class ViewVisibilityInfo(TypedDict):
+    view_name: str
+    visible: bool
+
+
+class ViewStateInfo(TypedDict, total=False):
+    selected_track: Optional[dict[str, Any]]
+    detail_clip: Optional[dict[str, Any]]
+    draw_mode: bool
+    follow_song: bool
+    browse_mode: Optional[bool]
+    visible_views: list[str]
+
+
+class SelectedDeviceState(TypedDict, total=False):
+    track_scope: str
+    track_index: Optional[int]
+    track_name: Optional[str]
+    device_index: Optional[int]
+    device_name: Optional[str]
+    class_name: Optional[str]
+    type: Optional[int]
+    is_active: Optional[bool]
+
+
+class SelectedDeviceInfo(TypedDict, total=False):
+    selected_device: Optional[SelectedDeviceState]
+    track: dict[str, Any]
+
+
+class SelectedParameterState(TypedDict, total=False):
+    name: str
+    value: float
+    min: float
+    max: float
+    is_quantized: bool
+    display_value: str
+    track_scope: str
+    track_index: Optional[int]
+    track_name: Optional[str]
+    device_index: Optional[int]
+    device_name: Optional[str]
+    class_name: Optional[str]
+    type: Optional[int]
+    is_active: Optional[bool]
+    parameter_index: Optional[int]
+
+
+class SelectedParameterInfo(TypedDict):
+    selected_parameter: Optional[SelectedParameterState]
+
+
+class SelectedChainState(TypedDict, total=False):
+    name: str
+    mute: bool
+    solo: bool
+    color_index: Optional[int]
+    device_count: int
+    volume: float
+    track_scope: str
+    track_index: Optional[int]
+    track_name: Optional[str]
+    device_index: Optional[int]
+    device_name: Optional[str]
+    class_name: Optional[str]
+    type: Optional[int]
+    is_active: Optional[bool]
+    chain_index: Optional[int]
+
+
+class SelectedChainInfo(TypedDict):
+    selected_chain: Optional[SelectedChainState]
+
+
+class SessionMetadataInfo(TypedDict, total=False):
+    current_song_time: float
+    song_length: float
+    is_modified: bool
+    current_cpu_load: float
+
+
+class SongSmpteTimeInfo(TypedDict):
+    hours: int
+    minutes: int
+    seconds: int
+    frames: int
+
+
+class SceneInfo(TypedDict, total=False):
+    index: int
+    name: str
+    color: int
+    tempo: float
+    time_signature_numerator: int
+    time_signature_denominator: int
+    is_empty: bool
+    clip_count: int
+
+
+def get_session_info() -> SessionInfo:
     """Get the current Ableton Live session state.
 
     Returns tempo, time signature, track count, return track count,
     master track info, playback state, and loop settings.
     """
     result = get_connection().send_command("get_session_info", {})
-    return json.dumps(result)
+    return result
 
 
-def get_song_time() -> str:
+def get_song_time() -> SongTimeInfo:
     """Get the current song time position and undo/redo availability.
 
     Returns current_song_time (in beats), can_undo, and can_redo.
     """
     result = get_connection().send_command("get_song_time", {})
-    return json.dumps(result)
+    return result
 
 
 def get_cue_points() -> str:
@@ -231,13 +411,13 @@ def tap_tempo() -> str:
     return json.dumps(result)
 
 
-def get_selected_track() -> str:
+def get_selected_track() -> SelectedTrackInfo:
     """Get information about the currently selected track.
 
     Returns the index, name, type, mute/solo/arm state, and color of the selected track.
     """
     result = get_connection().send_command("get_selected_track", {})
-    return json.dumps(result)
+    return result
 
 
 def set_selected_track(track_index: int) -> str:
@@ -250,13 +430,13 @@ def set_selected_track(track_index: int) -> str:
     return json.dumps(result)
 
 
-def get_selected_scene() -> str:
+def get_selected_scene() -> SelectedSceneInfo:
     """Get information about the currently selected scene.
 
     Returns the index, name, and color of the selected scene.
     """
     result = get_connection().send_command("get_selected_scene", {})
-    return json.dumps(result)
+    return result
 
 
 def set_selected_scene(scene_index: int) -> str:
@@ -314,22 +494,22 @@ def set_scene_time_signature(scene_index: int, numerator: int, denominator: int)
     return json.dumps(result)
 
 
-def get_application_info() -> str:
+def get_application_info() -> ApplicationInfo:
     """Get Ableton Live application version info.
 
     Returns major_version, minor_version, and bugfix_version.
     """
     result = get_connection().send_command("get_application_info", {})
-    return json.dumps(result)
+    return result
 
 
-def get_livemcp_info() -> str:
+def get_livemcp_info() -> LiveMCPInfo:
     """Get LiveMCP remote-script transport capability information."""
     result = get_connection().send_command("get_livemcp_info", {})
-    return json.dumps(result)
+    return result
 
 
-def get_livemcp_status() -> str:
+def get_livemcp_status() -> LiveMCPStatus:
     """Get local install state and remote-script capability status.
 
     Returns package version, client transport version, local install status,
@@ -368,16 +548,16 @@ def get_livemcp_status() -> str:
             "Ableton is running an older LiveMCP transport protocol; reinstall and restart Ableton."
         )
 
-    return json.dumps(status)
+    return status
 
 
-def get_application_dialog() -> str:
+def get_application_dialog() -> ApplicationDialogInfo:
     """Get information about the current Ableton dialog box.
 
     Returns open dialog count, current dialog message, and current dialog button count.
     """
     result = get_connection().send_command("get_application_dialog", {})
-    return json.dumps(result)
+    return result
 
 
 def press_current_dialog_button(index: int) -> str:
@@ -396,13 +576,13 @@ def get_application_cpu_usage() -> str:
     return json.dumps(result)
 
 
-def get_available_main_views() -> str:
+def get_available_main_views() -> MainViewsInfo:
     """Get the canonical Ableton view names accepted by view control tools."""
     result = get_connection().send_command("get_available_main_views", {})
-    return json.dumps(result)
+    return result
 
 
-def is_view_visible(view_name: str) -> str:
+def is_view_visible(view_name: str) -> ViewVisibilityInfo:
     """Get whether an Ableton view is currently visible.
 
     Args:
@@ -410,7 +590,7 @@ def is_view_visible(view_name: str) -> str:
                    'Detail', 'Detail/Clip', or 'Detail/DeviceChain'.
     """
     result = get_connection().send_command("is_view_visible", {"view_name": view_name})
-    return json.dumps(result)
+    return result
 
 
 def show_view(view_name: str) -> str:
@@ -567,19 +747,19 @@ def delete_locator(index: int) -> str:
     return json.dumps(result)
 
 
-def get_view_state() -> str:
+def get_view_state() -> ViewStateInfo:
     """Get the current view state in Ableton Live.
 
     Returns the selected track, detail clip (if any), draw mode, and follow song state.
     """
     result = get_connection().send_command("get_view_state", {})
-    return json.dumps(result)
+    return result
 
 
-def get_selected_device() -> str:
+def get_selected_device() -> SelectedDeviceInfo:
     """Get the currently selected device on the selected track."""
     result = get_connection().send_command("get_selected_device", {})
-    return json.dumps(result)
+    return result
 
 
 def select_device(track_index: int, device_index: int) -> str:
@@ -596,16 +776,16 @@ def select_device(track_index: int, device_index: int) -> str:
     return json.dumps(result)
 
 
-def get_selected_parameter() -> str:
+def get_selected_parameter() -> SelectedParameterInfo:
     """Get the currently selected Ableton device parameter."""
     result = get_connection().send_command("get_selected_parameter", {})
-    return json.dumps(result)
+    return result
 
 
-def get_selected_chain() -> str:
+def get_selected_chain() -> SelectedChainInfo:
     """Get the currently selected rack chain in Ableton's UI."""
     result = get_connection().send_command("get_selected_chain", {})
-    return json.dumps(result)
+    return result
 
 
 def set_follow_song(enabled: bool) -> str:
@@ -712,26 +892,26 @@ def show_message(message: str) -> str:
     return json.dumps(result)
 
 
-def get_session_metadata() -> str:
+def get_session_metadata() -> SessionMetadataInfo:
     """Get session metadata: modified state, current song time, song length, and CPU load.
 
     Returns is_modified, current_song_time (beats), song_length (beats),
     and current_cpu_load (if available).
     """
     result = get_connection().send_command("get_session_metadata", {})
-    return json.dumps(result)
+    return result
 
 
-def get_song_smpte_time() -> str:
+def get_song_smpte_time() -> SongSmpteTimeInfo:
     """Get the current song time in SMPTE (timecode) format.
 
     Returns hours, minutes, seconds, and frames.
     """
     result = get_connection().send_command("get_song_smpte_time", {})
-    return json.dumps(result)
+    return result
 
 
-def get_scene_info(scene_index: int) -> str:
+def get_scene_info(scene_index: int) -> SceneInfo:
     """Get detailed information about a specific scene.
 
     Returns the scene name, color, tempo (if tempo_enabled), time signature
@@ -741,7 +921,7 @@ def get_scene_info(scene_index: int) -> str:
         scene_index: Zero-based index of the scene.
     """
     result = get_connection().send_command("get_scene_info", {"scene_index": scene_index})
-    return json.dumps(result)
+    return result
 
 
 def get_scene_clips(scene_index: int) -> str:

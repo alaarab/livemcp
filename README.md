@@ -1,6 +1,6 @@
 # LiveMCP
 
-MCP server that exposes Ableton Live's internal Python API to AI assistants. 201 tools across 7 categories: session, clips, tracks, devices, mixer, arrangement, grooves.
+MCP server that exposes Ableton Live's internal Python API to AI assistants. 201 tools across 7 categories plus controller-oriented `live://...` MCP resources for session, status, selection, track, scene, and device state.
 
 [![Tools](https://img.shields.io/badge/Tools-201-blueviolet)](https://github.com/alaarab/livemcp) [![Python](https://img.shields.io/badge/Python-3.10+-3776AB)](https://python.org) [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
@@ -78,6 +78,32 @@ Config file locations:
 | Arrangement | 9 |
 | Grooves | 5 |
 | **Total** | **201** |
+
+## MCP Resources
+
+These are meant for controller-style reads where a client wants stable Ableton state without chaining multiple tools.
+
+### Fixed Resources
+
+| Resource | Description |
+|----------|-------------|
+| `live://status` | Combined local install state, remote reachability, and transport warnings |
+| `live://session/current` | Global transport and timing state |
+| `live://song/time` | Current playhead position and undo/redo state |
+| `live://view/current` | Current UI view state, visible views, follow-song, and draw mode |
+| `live://selection/track` | Currently selected track |
+| `live://selection/scene` | Currently selected scene |
+| `live://selection/device` | Currently selected device |
+| `live://application/dialog` | Current Ableton dialog state |
+
+### Resource Templates
+
+| Resource | Description |
+|----------|-------------|
+| `live://track/{track_index}` | Detailed track state |
+| `live://scene/{scene_index}` | Detailed scene state |
+| `live://scene/{scene_index}/clips` | Scene clip-slot state across all tracks |
+| `live://device/{track_index}/{device_index}` | Device parameters with display values |
 
 <details>
 <summary>Session Tools (74)</summary>

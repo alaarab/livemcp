@@ -4,14 +4,16 @@ import argparse
 
 from mcp.server.fastmcp import FastMCP
 
+from .resources import register_resources
 from .tools import session, tracks, clips, devices, mixer, arrangement, grooves
 
 mcp = FastMCP(
     "LiveMCP",
     instructions=(
-        "Control Ableton Live via MCP. You can manage sessions, tracks, clips, "
-        "devices, and mixer settings. Use get_session_info to see the current state, "
-        "then explore tracks, create clips, add MIDI notes, load instruments, and more."
+        "Control and inspect Ableton Live via MCP. Use live:// resources for status, "
+        "session, selection, and device state, then use tools to drive transport, "
+        "views, tracks, devices, clips, and mixer behavior. LiveMCP is primarily a "
+        "controller bridge for Ableton, not a composition agent."
     ),
 )
 
@@ -48,6 +50,8 @@ _all_tools = _collect_tools(
 
 for _fn in _all_tools:
     mcp.tool()(_fn)
+
+register_resources(mcp)
 
 
 def _build_parser() -> argparse.ArgumentParser:
