@@ -406,6 +406,11 @@ def quit_ableton(force: bool = True, app_name: str | None = None) -> None:
     if last_ui_error:
         raise RuntimeError(last_ui_error)
 
+    raise RuntimeError(
+        "Ableton did not exit after the quit request. "
+        "A save dialog may still be open or UI scripting may be unavailable."
+    )
+
 
 def wait_for_livemcp_socket(
     host: str = DEFAULT_HOST,

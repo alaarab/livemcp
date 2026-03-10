@@ -79,6 +79,24 @@ class QuitAbletonTests(unittest.TestCase):
         install.assert_called_once_with(use_symlink=False)
         print_mock.assert_called_once()
 
+    @mock.patch("livemcp.ableton.time.sleep", return_value=None)
+    @mock.patch("livemcp.ableton.time.time", side_effect=[0, 16])
+    @mock.patch("livemcp.ableton.is_process_running", return_value=True)
+    @mock.patch("livemcp.ableton._launch_osascript")
+    @mock.patch("livemcp.ableton.find_ableton_app", return_value="Ableton Live 12 Suite")
+    def test_quit_ableton_raises_when_not_forced_and_process_still_running(
+        self,
+        _find_ableton_app,
+        _launch_osascript,
+        _is_process_running,
+        _time,
+        _sleep,
+    ):
+        with self.assertRaises(RuntimeError) as context:
+            ableton.quit_ableton(force=False)
+
+        self.assertIn("did not exit", str(context.exception))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -57,6 +57,7 @@ class LiveMCPInfo(TypedDict, total=False):
     protocol_version: int
     supports_request_ids: bool
     transport: str
+    legacy_compatibility_mode: bool
 
 
 class InstallStatusInfo(TypedDict, total=False):
@@ -187,6 +188,15 @@ class SceneInfo(TypedDict, total=False):
     time_signature_denominator: int
     is_empty: bool
     clip_count: int
+
+
+def _legacy_remote_info() -> LiveMCPInfo:
+    return {
+        "protocol_version": 1,
+        "supports_request_ids": False,
+        "transport": "tcp-json-lines",
+        "legacy_compatibility_mode": True,
+    }
 
 
 def get_session_info() -> SessionInfo:
@@ -529,6 +539,13 @@ def get_livemcp_status() -> LiveMCPStatus:
     try:
         status["remote_info"] = probe_command("get_livemcp_info", {}, timeout=2.0)
         status["remote_reachable"] = True
+    except RuntimeError as exc:
+        error_message = str(exc)
+        if "Unknown command: get_livemcp_info" in error_message:
+            status["remote_info"] = _legacy_remote_info()
+            status["remote_reachable"] = True
+        else:
+            status["remote_error"] = error_message
     except Exception as exc:
         status["remote_error"] = str(exc)
 

@@ -311,7 +311,7 @@ wheels = [
 
 [[package]]
 name = "livemcp"
-version = "1.2.6"
+version = "1.2.7"
 source = { editable = "." }
 dependencies = [
     { name = "mcp", extra = ["cli"] },

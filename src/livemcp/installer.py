@@ -223,17 +223,17 @@ def install(use_symlink: bool | None = None):
         print("Supports macOS, Windows, and WSL.", file=sys.stderr)
         sys.exit(1)
 
-    print(f"Found Ableton at: {target}")
-
-    _remove_old(target)
-
-    dest = target / "LiveMCP"
     if use_symlink is None:
         use_symlink = plat == "macos" and os.environ.get("LIVEMCP_INSTALL_SYMLINK") == "1"
     if use_symlink and plat != "macos":
         print("Error: --symlink-install is only supported on macOS.", file=sys.stderr)
         sys.exit(1)
 
+    print(f"Found Ableton at: {target}")
+
+    _remove_old(target)
+
+    dest = target / "LiveMCP"
     if use_symlink:
         os.symlink(source, dest)
         print(f"Symlinked: {dest} -> {source}")

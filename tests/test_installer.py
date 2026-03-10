@@ -82,6 +82,23 @@ class InstallerTests(unittest.TestCase):
         symlink.assert_called_once_with(Path("/tmp/LiveMCP"), Path("/tmp/MIDI Remote Scripts/LiveMCP"))
         copytree.assert_not_called()
 
+    @mock.patch("livemcp.installer._remove_old")
+    @mock.patch("livemcp.installer._find_ableton")
+    @mock.patch("livemcp.installer._get_remote_script_source")
+    def test_install_rejects_symlink_request_before_removing_existing_install(
+        self,
+        get_remote_script_source,
+        find_ableton,
+        remove_old,
+    ):
+        get_remote_script_source.return_value = Path("/tmp/LiveMCP")
+        find_ableton.return_value = Path("/tmp/MIDI Remote Scripts"), "windows"
+
+        with self.assertRaises(SystemExit):
+            installer.install(use_symlink=True)
+
+        remove_old.assert_not_called()
+
     @mock.patch("livemcp.installer._find_ableton")
     @mock.patch("livemcp.installer._get_remote_script_source")
     def test_get_install_status_reports_out_of_sync_copy(self, get_remote_script_source, find_ableton):
