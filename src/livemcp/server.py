@@ -63,6 +63,11 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Do not force-kill Ableton if a quit request stalls; only valid with --quit-ableton",
     )
+    parser.add_argument(
+        "--symlink-install",
+        action="store_true",
+        help="Symlink the remote script into Ableton instead of copying it; only valid with --install",
+    )
     return parser
 
 
@@ -73,11 +78,13 @@ def main(argv: list[str] | None = None):
 
     if args.no_force and not args.quit_ableton:
         parser.error("--no-force can only be used with --quit-ableton")
+    if args.symlink_install and not args.install:
+        parser.error("--symlink-install can only be used with --install")
 
     if args.install:
         from .installer import install
 
-        install()
+        install(use_symlink=args.symlink_install)
     elif args.uninstall:
         from .installer import uninstall
 

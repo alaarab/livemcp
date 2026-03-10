@@ -58,6 +58,27 @@ class InstallerTests(unittest.TestCase):
         copytree.assert_called_once_with(Path("/tmp/LiveMCP"), Path("/tmp/MIDI Remote Scripts/LiveMCP"))
         symlink.assert_not_called()
 
+    @mock.patch("livemcp.installer._remove_old")
+    @mock.patch("livemcp.installer.shutil.copytree")
+    @mock.patch("livemcp.installer.os.symlink")
+    @mock.patch("livemcp.installer._find_ableton")
+    @mock.patch("livemcp.installer._get_remote_script_source")
+    def test_install_uses_symlink_when_requested_on_macos(
+        self,
+        get_remote_script_source,
+        find_ableton,
+        symlink,
+        copytree,
+        _remove_old,
+    ):
+        get_remote_script_source.return_value = Path("/tmp/LiveMCP")
+        find_ableton.return_value = Path("/tmp/MIDI Remote Scripts"), "macos"
+
+        installer.install(use_symlink=True)
+
+        symlink.assert_called_once_with(Path("/tmp/LiveMCP"), Path("/tmp/MIDI Remote Scripts/LiveMCP"))
+        copytree.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()

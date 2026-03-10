@@ -119,9 +119,19 @@ class AbletonConnectionTests(unittest.TestCase):
         connection = AbletonConnection()
 
         socket_one = ScriptedFakeSocket(
-            lambda request, send_count: (
-                {"id": request["id"], "status": "success", "result": {"ok": "ping"}}
-                if send_count == 1
+            lambda request, _send_count: (
+                {"id": request["id"], "status": "success", "result": {"tempo": 120.0}}
+                if request["type"] == "get_session_info"
+                else {
+                    "id": request["id"],
+                    "status": "success",
+                    "result": {
+                        "protocol_version": 2,
+                        "supports_request_ids": True,
+                        "transport": "tcp-json-lines",
+                    },
+                }
+                if request["type"] == "get_livemcp_info"
                 else {"id": 999, "status": "success", "result": {"ok": "wrong"}}
             )
         )
@@ -145,10 +155,13 @@ class AbletonConnectionTests(unittest.TestCase):
 
         self.assertEqual(result, {"ok": "ping"})
         self.assertTrue(socket_one.closed)
-        command_ids = [
-            json.loads(payload.rstrip(MESSAGE_TERMINATOR).decode("utf-8"))["id"]
-            for payload in (socket_one.sent_payloads[1], socket_two.sent_payloads[1])
-        ]
+        command_ids = []
+        for fake_socket in (socket_one, socket_two):
+            for payload in fake_socket.sent_payloads:
+                command = json.loads(payload.rstrip(MESSAGE_TERMINATOR).decode("utf-8"))
+                if command["type"] == "ping":
+                    command_ids.append(command["id"])
+
         self.assertEqual(command_ids, [1, 1])
 
     def test_send_command_accepts_legacy_response_without_request_id(self):
@@ -160,6 +173,69 @@ class AbletonConnectionTests(unittest.TestCase):
         result = connection.send_command("ping", {})
 
         self.assertEqual(result, {"ok": "legacy"})
+
+    def test_connect_records_server_info_when_supported(self):
+        connection = AbletonConnection()
+        connection._open_socket = lambda: ScriptedFakeSocket(
+            lambda request, _send_count: (
+                {
+                    "id": request["id"],
+                    "status": "success",
+                    "result": {"tempo": 120.0},
+                }
+                if request["type"] == "get_session_info"
+                else {
+                    "id": request["id"],
+                    "status": "success",
+                    "result": {
+                        "protocol_version": 2,
+                        "supports_request_ids": True,
+                        "transport": "tcp-json-lines",
+                    },
+                }
+            )
+        )
+
+        connection.connect()
+
+        self.assertEqual(
+            connection.get_server_info(),
+            {
+                "protocol_version": 2,
+                "supports_request_ids": True,
+                "transport": "tcp-json-lines",
+                "legacy_compatibility_mode": False,
+            },
+        )
+
+    def test_connect_falls_back_to_legacy_server_info(self):
+        connection = AbletonConnection()
+        connection._open_socket = lambda: ScriptedFakeSocket(
+            lambda request, _send_count: (
+                {
+                    "id": request["id"],
+                    "status": "success",
+                    "result": {"tempo": 120.0},
+                }
+                if request["type"] == "get_session_info"
+                else {
+                    "status": "error",
+                    "error": "Unknown command: get_livemcp_info",
+                }
+            )
+        )
+
+        connection.connect()
+
+        self.assertEqual(
+            connection.get_server_info(),
+            {
+                "protocol_version": 1,
+                "supports_request_ids": False,
+                "transport": "tcp-json-lines",
+                "legacy_compatibility_mode": True,
+            },
+        )
 
 
 if __name__ == "__main__":

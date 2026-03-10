@@ -121,7 +121,7 @@ def _remove_old(target_dir):
         print("Note: Found AbletonMCP directory. Not removing — delete manually if desired.")
 
 
-def install():
+def install(use_symlink: bool | None = None):
     source = _get_remote_script_source()
     if source is None:
         print("Error: Could not find the LiveMCP remote script files.", file=sys.stderr)
@@ -138,7 +138,11 @@ def install():
     _remove_old(target)
 
     dest = target / "LiveMCP"
-    use_symlink = plat == "macos" and os.environ.get("LIVEMCP_INSTALL_SYMLINK") == "1"
+    if use_symlink is None:
+        use_symlink = plat == "macos" and os.environ.get("LIVEMCP_INSTALL_SYMLINK") == "1"
+    if use_symlink and plat != "macos":
+        print("Error: --symlink-install is only supported on macOS.", file=sys.stderr)
+        sys.exit(1)
 
     if use_symlink:
         os.symlink(source, dest)
