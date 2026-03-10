@@ -2,11 +2,18 @@
 
 import os
 import platform
+import re
 import shutil
 import sys
 from pathlib import Path
 
-EDITIONS = ["Live 12 Suite", "Live 12 Standard", "Live 11 Suite"]
+EDITION_PRIORITY = {
+    "Suite": 5,
+    "Standard": 4,
+    "Intro": 3,
+    "Lite": 2,
+    "Trial": 1,
+}
 
 
 def _get_remote_script_source():
@@ -32,57 +39,72 @@ def _is_wsl():
         return False
 
 
-def _find_ableton():
-    """Return the first existing MIDI Remote Scripts directory."""
+def _parse_ableton_label(label: str) -> tuple[tuple[int, ...], int, str]:
+    match = re.search(r"Live (\d+(?:\.\d+)*) (.+)", label)
+    if not match:
+        return (0,), 0, label
+
+    version = tuple(int(part) for part in match.group(1).split("."))
+    edition = match.group(2).strip()
+    return version, EDITION_PRIORITY.get(edition, 0), label
+
+
+def _sort_key_for_remote_scripts_dir(path: Path) -> tuple[tuple[int, ...], int, str]:
+    for ancestor in path.parents:
+        if ancestor.suffix == ".app" and ancestor.name.startswith("Ableton Live"):
+            return _parse_ableton_label(ancestor.stem)
+    return _parse_ableton_label(path.parents[1].name)
+
+
+def _discover_remote_script_dirs():
     system = platform.system()
+    candidates = []
 
     if system == "Darwin":
-        for edition in EDITIONS:
-            p = Path(f"/Applications/Ableton {edition}.app/Contents/App-Resources/MIDI Remote Scripts")
-            if p.is_dir():
-                return p, "macos"
+        applications_dir = Path("/Applications")
+        for app_path in applications_dir.glob("Ableton Live*.app"):
+            scripts_dir = app_path / "Contents" / "App-Resources" / "MIDI Remote Scripts"
+            if scripts_dir.is_dir():
+                candidates.append(scripts_dir)
 
     elif system == "Windows":
-        program_data = os.environ.get("PROGRAMDATA", r"C:\ProgramData")
-        for edition in EDITIONS:
-            p = Path(program_data) / "Ableton" / edition / "Resources" / "MIDI Remote Scripts"
-            if p.is_dir():
-                return p, "windows"
+        ableton_root = Path(os.environ.get("PROGRAMDATA", r"C:\ProgramData")) / "Ableton"
+        if ableton_root.is_dir():
+            for live_dir in ableton_root.glob("Live *"):
+                scripts_dir = live_dir / "Resources" / "MIDI Remote Scripts"
+                if scripts_dir.is_dir():
+                    candidates.append(scripts_dir)
 
     elif system == "Linux" and _is_wsl():
-        for edition in EDITIONS:
-            p = Path(f"/mnt/c/ProgramData/Ableton/{edition}/Resources/MIDI Remote Scripts")
-            if p.is_dir():
-                return p, "wsl"
+        ableton_root = Path("/mnt/c/ProgramData/Ableton")
+        if ableton_root.is_dir():
+            for live_dir in ableton_root.glob("Live *"):
+                scripts_dir = live_dir / "Resources" / "MIDI Remote Scripts"
+                if scripts_dir.is_dir():
+                    candidates.append(scripts_dir)
 
-    return None, None
+    return sorted(candidates, key=_sort_key_for_remote_scripts_dir, reverse=True)
+
+
+def _find_ableton():
+    """Return the first existing MIDI Remote Scripts directory."""
+    dirs = _discover_remote_script_dirs()
+    if not dirs:
+        return None, None
+
+    system = platform.system()
+    if system == "Darwin":
+        platform_name = "macos"
+    elif system == "Linux" and _is_wsl():
+        platform_name = "wsl"
+    else:
+        platform_name = system.lower()
+    return dirs[0], platform_name
 
 
 def _find_all_ableton():
     """Return all existing MIDI Remote Scripts directories."""
-    dirs = []
-    system = platform.system()
-
-    if system == "Darwin":
-        for edition in EDITIONS:
-            p = Path(f"/Applications/Ableton {edition}.app/Contents/App-Resources/MIDI Remote Scripts")
-            if p.is_dir():
-                dirs.append(p)
-
-    elif system == "Windows":
-        program_data = os.environ.get("PROGRAMDATA", r"C:\ProgramData")
-        for edition in EDITIONS:
-            p = Path(program_data) / "Ableton" / edition / "Resources" / "MIDI Remote Scripts"
-            if p.is_dir():
-                dirs.append(p)
-
-    elif system == "Linux" and _is_wsl():
-        for edition in EDITIONS:
-            p = Path(f"/mnt/c/ProgramData/Ableton/{edition}/Resources/MIDI Remote Scripts")
-            if p.is_dir():
-                dirs.append(p)
-
-    return dirs
+    return _discover_remote_script_dirs()
 
 
 def _remove_old(target_dir):
@@ -116,7 +138,7 @@ def install():
     _remove_old(target)
 
     dest = target / "LiveMCP"
-    use_symlink = plat == "macos"
+    use_symlink = plat == "macos" and os.environ.get("LIVEMCP_INSTALL_SYMLINK") == "1"
 
     if use_symlink:
         os.symlink(source, dest)

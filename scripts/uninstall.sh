@@ -1,18 +1,9 @@
 #!/bin/bash
-set -e
+# Uninstall LiveMCP through the packaged CLI helper.
 
-ABLETON_12="/Applications/Ableton Live 12 Suite.app/Contents/App-Resources/MIDI Remote Scripts"
-ABLETON_12_STD="/Applications/Ableton Live 12 Standard.app/Contents/App-Resources/MIDI Remote Scripts"
-ABLETON_11="/Applications/Ableton Live 11 Suite.app/Contents/App-Resources/MIDI Remote Scripts"
+set -euo pipefail
 
-for DIR in "$ABLETON_12" "$ABLETON_12_STD" "$ABLETON_11"; do
-    if [ -L "$DIR/LiveMCP" ]; then
-        rm "$DIR/LiveMCP"
-        echo "Removed symlink: $DIR/LiveMCP"
-    elif [ -d "$DIR/LiveMCP" ]; then
-        rm -rf "$DIR/LiveMCP"
-        echo "Removed directory: $DIR/LiveMCP"
-    fi
-done
+SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
-echo "LiveMCP uninstalled."
+cd "$SCRIPT_DIR"
+uv run livemcp --uninstall

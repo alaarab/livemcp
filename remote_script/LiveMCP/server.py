@@ -22,6 +22,8 @@ class LiveMCPServer:
         self._server_socket = None
         self._server_thread = None
         self._client_threads = []
+        self._client_sockets = []
+        self._client_lock = threading.Lock()
         self._running = False
         self._read_handlers = get_all_read_handlers()
         self._write_handlers = get_all_write_handlers()
@@ -52,8 +54,25 @@ class LiveMCPServer:
                 self._server_socket.close()
             except Exception:
                 pass
+
+        with self._client_lock:
+            client_sockets = list(self._client_sockets)
+            client_threads = list(self._client_threads)
+
+        for client in client_sockets:
+            try:
+                client.shutdown(socket.SHUT_RDWR)
+            except Exception:
+                pass
+            try:
+                client.close()
+            except Exception:
+                pass
+
         if self._server_thread:
             self._server_thread.join(timeout=2.0)
+        for thread in client_threads:
+            thread.join(timeout=2.0)
         self.log("Server stopped")
 
     def _accept_loop(self):
@@ -61,11 +80,16 @@ class LiveMCPServer:
         while self._running:
             try:
                 client, addr = self._server_socket.accept()
+                client.settimeout(1.0)
                 self.log("Client connected from {0}".format(addr))
-                self._client_threads = [t for t in self._client_threads if t.is_alive()]
+                with self._client_lock:
+                    self._client_threads = [t for t in self._client_threads if t.is_alive()]
+                    self._client_sockets = [sock for sock in self._client_sockets if sock.fileno() != -1]
                 t = threading.Thread(target=self._handle_client, args=(client,), daemon=True)
                 t.start()
-                self._client_threads.append(t)
+                with self._client_lock:
+                    self._client_threads.append(t)
+                    self._client_sockets.append(client)
             except socket.timeout:
                 continue
             except Exception as e:
@@ -77,7 +101,12 @@ class LiveMCPServer:
         buffer = b""
         try:
             while self._running:
-                data = client.recv(RECV_SIZE)
+                try:
+                    data = client.recv(RECV_SIZE)
+                except socket.timeout:
+                    continue
+                except OSError:
+                    break
                 if not data:
                     break
                 buffer += data
@@ -103,6 +132,11 @@ class LiveMCPServer:
         except Exception as e:
             self.log("Client error: {0}".format(e))
         finally:
+            with self._client_lock:
+                self._client_sockets = [sock for sock in self._client_sockets if sock is not client]
+                self._client_threads = [
+                    thread for thread in self._client_threads if thread is not threading.current_thread()
+                ]
             try:
                 client.close()
             except Exception:
