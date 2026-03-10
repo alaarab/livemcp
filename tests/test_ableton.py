@@ -45,6 +45,22 @@ class QuitAbletonTests(unittest.TestCase):
 
         self.assertEqual(found, packaged_remote_script)
 
+    def test_find_ableton_preferences_dir_prefers_matching_app_version(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            prefs_root = Path(temp_dir)
+            latest_other = prefs_root / "Live 12.3.1"
+            matching = prefs_root / "Live 11.3.25"
+            older_matching = prefs_root / "Live 11.2.10"
+            for path in (latest_other, matching, older_matching):
+                path.mkdir(parents=True)
+
+            found = ableton.find_ableton_preferences_dir(
+                app_name="Ableton Live 11 Suite",
+                prefs_root=prefs_root,
+            )
+
+        self.assertEqual(found, matching)
+
 
 if __name__ == "__main__":
     unittest.main()
