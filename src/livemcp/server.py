@@ -31,5 +31,20 @@ def main():
     elif "--uninstall" in sys.argv:
         from .installer import uninstall
         uninstall()
+    elif "--restart-ableton" in sys.argv:
+        from .ableton import restart_ableton
+
+        app_name = restart_ableton()
+        print(f"Restarted {app_name} and confirmed LiveMCP is reachable on port 9877.")
+    elif "--launch-ableton" in sys.argv:
+        from .ableton import launch_ableton
+
+        app_name = launch_ableton()
+        print(f"Launched {app_name}.")
+    elif "--quit-ableton" in sys.argv:
+        from .ableton import quit_ableton
+
+        quit_ableton(force="--no-force" not in sys.argv)
+        print("Quit Ableton Live.")
     else:
         mcp.run(transport="stdio")
