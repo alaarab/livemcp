@@ -1,5 +1,107 @@
 """Session-level handlers: tempo, transport, time signature."""
 
+DEFAULT_MAIN_VIEWS = [
+    "Browser",
+    "Arranger",
+    "Session",
+    "Detail",
+    "Detail/Clip",
+    "Detail/DeviceChain",
+]
+
+VIEW_NAME_ALIASES = {
+    "browser": "Browser",
+    "arranger": "Arranger",
+    "arrangement": "Arranger",
+    "session": "Session",
+    "detail": "Detail",
+    "clip": "Detail/Clip",
+    "detailclip": "Detail/Clip",
+    "device": "Detail/DeviceChain",
+    "devicechain": "Detail/DeviceChain",
+    "detaildevicechain": "Detail/DeviceChain",
+}
+
+
+def _normalize_view_name(view_name):
+    if view_name is None:
+        raise ValueError("Missing required parameter: view_name")
+    raw = str(view_name).strip()
+    if not raw:
+        raise ValueError("view_name cannot be empty")
+    normalized = raw.lower().replace(" ", "").replace("_", "").replace("-", "").replace("/", "")
+    canonical = VIEW_NAME_ALIASES.get(normalized)
+    if canonical is None:
+        raise ValueError(
+            "Unsupported view_name '{}'. Supported values: {}".format(
+                raw, ", ".join(DEFAULT_MAIN_VIEWS)
+            )
+        )
+    return canonical
+
+
+def _get_application_view(control_surface):
+    return control_surface.application().view
+
+
+def _get_available_main_views(app_view):
+    try:
+        return list(app_view.available_main_views())
+    except TypeError:
+        return list(app_view.available_main_views)
+    except Exception:
+        return list(DEFAULT_MAIN_VIEWS)
+
+
+def _describe_track_location(song, track):
+    if track is None:
+        return {"scope": None, "index": None, "name": None}
+    try:
+        return {
+            "scope": "track",
+            "index": list(song.tracks).index(track),
+            "name": track.name,
+        }
+    except ValueError:
+        pass
+    try:
+        return {
+            "scope": "return",
+            "index": list(song.return_tracks).index(track),
+            "name": track.name,
+        }
+    except ValueError:
+        pass
+    if track == song.master_track:
+        return {"scope": "master", "index": None, "name": track.name}
+    return {"scope": "unknown", "index": None, "name": getattr(track, "name", None)}
+
+
+def _get_selected_device_on_track(track):
+    try:
+        return track.view.selected_device
+    except Exception:
+        return None
+
+
+def _describe_device(song, track, device):
+    track_info = _describe_track_location(song, track)
+    device_index = None
+    try:
+        device_index = list(track.devices).index(device)
+    except Exception:
+        pass
+    return {
+        "track_scope": track_info["scope"],
+        "track_index": track_info["index"],
+        "track_name": track_info["name"],
+        "device_index": device_index,
+        "device_name": getattr(device, "name", None),
+        "class_name": getattr(device, "class_name", None),
+        "type": int(device.type) if hasattr(device, "type") else None,
+        "is_active": getattr(device, "is_active", None),
+    }
+
 
 def get_session_info(control_surface, params):
     """Return global session state."""
@@ -398,10 +500,190 @@ def get_application_info(control_surface, params):
     }
 
 
+def get_application_dialog(control_surface, params):
+    """Return the current Ableton dialog state."""
+    app = control_surface.application()
+    return {
+        "open_dialog_count": app.open_dialog_count,
+        "current_dialog_message": app.current_dialog_message,
+        "current_dialog_button_count": app.current_dialog_button_count,
+    }
+
+
+def press_current_dialog_button(control_surface, params):
+    """Press a button in the current Ableton dialog box."""
+    index = params.get("index")
+    if index is None:
+        raise ValueError("Missing required parameter: index")
+    index = int(index)
+
+    app = control_surface.application()
+    button_count = app.current_dialog_button_count
+    if app.open_dialog_count <= 0 or button_count <= 0:
+        raise ValueError("No dialog is currently open")
+    if index < 0 or index >= button_count:
+        raise ValueError("Dialog button index {} out of range (0-{})".format(index, button_count - 1))
+
+    app.press_current_dialog_button(index)
+    return {
+        "pressed_index": index,
+        "open_dialog_count": app.open_dialog_count,
+        "current_dialog_message": app.current_dialog_message,
+        "current_dialog_button_count": app.current_dialog_button_count,
+    }
+
+
+def get_application_cpu_usage(control_surface, params):
+    """Return Ableton application's average and peak CPU usage."""
+    app = control_surface.application()
+    return {
+        "average_process_usage": app.average_process_usage,
+        "peak_process_usage": app.peak_process_usage,
+    }
+
+
+def get_available_main_views(control_surface, params):
+    """Return the canonical view names available for Application.View helpers."""
+    app_view = _get_application_view(control_surface)
+    return {"available_main_views": _get_available_main_views(app_view)}
+
+
+def is_view_visible(control_surface, params):
+    """Return whether a given Ableton view is currently visible."""
+    app_view = _get_application_view(control_surface)
+    view_name = _normalize_view_name(params.get("view_name"))
+    return {
+        "view_name": view_name,
+        "visible": bool(app_view.is_view_visible(view_name)),
+    }
+
+
+def show_view(control_surface, params):
+    """Show a given Ableton view."""
+    app_view = _get_application_view(control_surface)
+    view_name = _normalize_view_name(params.get("view_name"))
+    app_view.show_view(view_name)
+    return {"view_name": view_name, "visible": bool(app_view.is_view_visible(view_name))}
+
+
+def hide_view(control_surface, params):
+    """Hide a given Ableton view."""
+    app_view = _get_application_view(control_surface)
+    view_name = _normalize_view_name(params.get("view_name"))
+    app_view.hide_view(view_name)
+    return {"view_name": view_name, "visible": bool(app_view.is_view_visible(view_name))}
+
+
+def focus_view(control_surface, params):
+    """Focus a given Ableton view."""
+    app_view = _get_application_view(control_surface)
+    view_name = _normalize_view_name(params.get("view_name"))
+    app_view.focus_view(view_name)
+    return {"view_name": view_name, "visible": bool(app_view.is_view_visible(view_name))}
+
+
+def toggle_browse(control_surface, params):
+    """Toggle Ableton's browse mode."""
+    app_view = _get_application_view(control_surface)
+    app_view.toggle_browse()
+    result = {}
+    try:
+        result["browse_mode"] = bool(app_view.browse_mode)
+    except Exception:
+        result["browse_mode"] = None
+    return result
+
+
 def get_record_mode(control_surface, params):
     """Return whether arrangement recording is armed."""
     song = control_surface.song()
     return {"record_mode": song.record_mode}
+
+
+def get_link_state(control_surface, params):
+    """Return Ableton Link, Start/Stop Sync, and Tempo Follower state."""
+    song = control_surface.song()
+    result = {}
+    property_map = {
+        "is_ableton_link_enabled": "ableton_link_enabled",
+        "is_ableton_link_start_stop_sync_enabled": "ableton_link_start_stop_sync_enabled",
+        "tempo_follower_enabled": "tempo_follower_enabled",
+    }
+    for source_name, target_name in property_map.items():
+        try:
+            result[target_name] = bool(getattr(song, source_name))
+        except Exception:
+            result[target_name] = None
+    return result
+
+
+def set_ableton_link_enabled(control_surface, params):
+    """Enable or disable Ableton Link."""
+    enabled = params.get("enabled")
+    if enabled is None:
+        raise ValueError("Missing required parameter: enabled")
+    song = control_surface.song()
+    song.is_ableton_link_enabled = bool(enabled)
+    return {"ableton_link_enabled": bool(song.is_ableton_link_enabled)}
+
+
+def set_ableton_link_start_stop_sync_enabled(control_surface, params):
+    """Enable or disable Ableton Link Start/Stop Sync."""
+    enabled = params.get("enabled")
+    if enabled is None:
+        raise ValueError("Missing required parameter: enabled")
+    song = control_surface.song()
+    song.is_ableton_link_start_stop_sync_enabled = bool(enabled)
+    return {
+        "ableton_link_start_stop_sync_enabled": bool(
+            song.is_ableton_link_start_stop_sync_enabled
+        )
+    }
+
+
+def set_tempo_follower_enabled(control_surface, params):
+    """Enable or disable Tempo Follower."""
+    enabled = params.get("enabled")
+    if enabled is None:
+        raise ValueError("Missing required parameter: enabled")
+    song = control_surface.song()
+    song.tempo_follower_enabled = bool(enabled)
+    return {"tempo_follower_enabled": bool(song.tempo_follower_enabled)}
+
+
+def get_count_in_state(control_surface, params):
+    """Return count-in duration and active counting-in state."""
+    song = control_surface.song()
+    return {
+        "count_in_duration": int(song.count_in_duration),
+        "is_counting_in": bool(song.is_counting_in),
+    }
+
+
+def get_session_record_status(control_surface, params):
+    """Return Session Record state and status value."""
+    song = control_surface.song()
+    result = {"session_record": bool(song.session_record)}
+    try:
+        result["session_record_status"] = int(song.session_record_status)
+    except Exception:
+        result["session_record_status"] = None
+    return result
+
+
+def set_session_record(control_surface, params):
+    """Enable or disable Session Record."""
+    enabled = params.get("enabled")
+    if enabled is None:
+        raise ValueError("Missing required parameter: enabled")
+    song = control_surface.song()
+    song.session_record = bool(enabled)
+    result = {"session_record": bool(song.session_record)}
+    try:
+        result["session_record_status"] = int(song.session_record_status)
+    except Exception:
+        result["session_record_status"] = None
+    return result
 
 
 def set_record_mode(control_surface, params):
@@ -497,12 +779,123 @@ def get_view_state(control_surface, params):
     clip_info = None
     if detail_clip is not None:
         clip_info = {"name": detail_clip.name, "length": detail_clip.length}
-    return {
+    result = {
         "selected_track": track_info,
         "detail_clip": clip_info,
         "draw_mode": view.draw_mode,
         "follow_song": view.follow_song,
     }
+    app_view = _get_application_view(control_surface)
+    try:
+        result["browse_mode"] = app_view.browse_mode
+    except Exception:
+        pass
+    try:
+        result["visible_views"] = [
+            view_name
+            for view_name in _get_available_main_views(app_view)
+            if app_view.is_view_visible(view_name)
+        ]
+    except Exception:
+        pass
+    return result
+
+
+def get_selected_device(control_surface, params):
+    """Return the selected device on the selected track."""
+    song = control_surface.song()
+    track = song.view.selected_track
+    if track is None:
+        return {"selected_device": None}
+    device = _get_selected_device_on_track(track)
+    if device is None:
+        return {"selected_device": None, "track": _describe_track_location(song, track)}
+    return {"selected_device": _describe_device(song, track, device)}
+
+
+def select_device(control_surface, params):
+    """Select a device on a track."""
+    track_index = params.get("track_index")
+    device_index = params.get("device_index")
+    if track_index is None:
+        raise ValueError("Missing required parameter: track_index")
+    if device_index is None:
+        raise ValueError("Missing required parameter: device_index")
+    track_index = int(track_index)
+    device_index = int(device_index)
+
+    song = control_surface.song()
+    if track_index < 0 or track_index >= len(song.tracks):
+        raise ValueError("Track index {0} out of range (0-{1})".format(
+            track_index, len(song.tracks) - 1))
+    track = song.tracks[track_index]
+    if device_index < 0 or device_index >= len(track.devices):
+        raise ValueError("Device index {0} out of range (0-{1})".format(
+            device_index, len(track.devices) - 1))
+
+    device = track.devices[device_index]
+    song.view.selected_track = track
+    song.view.select_device(device)
+    return {"selected_device": _describe_device(song, track, device)}
+
+
+def get_selected_parameter(control_surface, params):
+    """Return the currently selected parameter."""
+    song = control_surface.song()
+    parameter = song.view.selected_parameter
+    if parameter is None:
+        return {"selected_parameter": None}
+
+    result = {
+        "name": parameter.name,
+        "value": parameter.value,
+        "min": parameter.min,
+        "max": parameter.max,
+        "is_quantized": parameter.is_quantized,
+        "display_value": str(parameter),
+    }
+
+    track = song.view.selected_track
+    device = _get_selected_device_on_track(track) if track is not None else None
+    if device is not None:
+        result.update(_describe_device(song, track, device))
+        try:
+            result["parameter_index"] = list(device.parameters).index(parameter)
+        except ValueError:
+            result["parameter_index"] = None
+
+    return {"selected_parameter": result}
+
+
+def get_selected_chain(control_surface, params):
+    """Return the currently selected chain."""
+    song = control_surface.song()
+    try:
+        chain = song.view.selected_chain
+    except Exception:
+        return {"selected_chain": None}
+    if chain is None:
+        return {"selected_chain": None}
+
+    result = {
+        "name": chain.name,
+        "mute": chain.mute,
+        "solo": chain.solo,
+        "color_index": getattr(chain, "color_index", None),
+        "device_count": len(chain.devices),
+        "volume": chain.mixer_device.volume.value,
+    }
+
+    track = song.view.selected_track
+    device = _get_selected_device_on_track(track) if track is not None else None
+    if device is not None and hasattr(device, "chains"):
+        result.update(_describe_device(song, track, device))
+        try:
+            result["chain_index"] = list(device.chains).index(chain)
+        except ValueError:
+            result["chain_index"] = None
+
+    return {"selected_chain": result}
 
 
 def set_follow_song(control_surface, params):
@@ -714,8 +1107,18 @@ READ_HANDLERS = {
     "get_selected_scene": get_selected_scene,
     "get_scene_properties": get_scene_properties,
     "get_application_info": get_application_info,
+    "get_application_dialog": get_application_dialog,
+    "get_application_cpu_usage": get_application_cpu_usage,
+    "get_available_main_views": get_available_main_views,
+    "is_view_visible": is_view_visible,
     "get_record_mode": get_record_mode,
+    "get_link_state": get_link_state,
+    "get_count_in_state": get_count_in_state,
+    "get_session_record_status": get_session_record_status,
     "get_view_state": get_view_state,
+    "get_selected_device": get_selected_device,
+    "get_selected_parameter": get_selected_parameter,
+    "get_selected_chain": get_selected_chain,
     "get_punch_state": get_punch_state,
     "get_session_automation_record": get_session_automation_record,
     "get_session_metadata": get_session_metadata,
@@ -750,10 +1153,20 @@ WRITE_HANDLERS = {
     "set_selected_scene": set_selected_scene,
     "set_scene_tempo": set_scene_tempo,
     "set_scene_time_signature": set_scene_time_signature,
+    "press_current_dialog_button": press_current_dialog_button,
+    "show_view": show_view,
+    "hide_view": hide_view,
+    "focus_view": focus_view,
+    "toggle_browse": toggle_browse,
+    "set_ableton_link_enabled": set_ableton_link_enabled,
+    "set_ableton_link_start_stop_sync_enabled": set_ableton_link_start_stop_sync_enabled,
+    "set_tempo_follower_enabled": set_tempo_follower_enabled,
+    "set_session_record": set_session_record,
     "set_record_mode": set_record_mode,
     "capture_and_insert_scene": capture_and_insert_scene,
     "create_locator": create_locator,
     "delete_locator": delete_locator,
+    "select_device": select_device,
     "set_follow_song": set_follow_song,
     "set_draw_mode": set_draw_mode,
     "select_clip_in_detail": select_clip_in_detail,

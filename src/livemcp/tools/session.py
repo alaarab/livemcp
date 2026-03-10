@@ -320,12 +320,154 @@ def get_application_info() -> str:
     return json.dumps(result)
 
 
+def get_application_dialog() -> str:
+    """Get information about the current Ableton dialog box.
+
+    Returns open dialog count, current dialog message, and current dialog button count.
+    """
+    result = get_connection().send_command("get_application_dialog", {})
+    return json.dumps(result)
+
+
+def press_current_dialog_button(index: int) -> str:
+    """Press a button in the current Ableton dialog box.
+
+    Args:
+        index: Zero-based button index in the current dialog.
+    """
+    result = get_connection().send_command("press_current_dialog_button", {"index": index})
+    return json.dumps(result)
+
+
+def get_application_cpu_usage() -> str:
+    """Get Ableton application's average and peak CPU usage."""
+    result = get_connection().send_command("get_application_cpu_usage", {})
+    return json.dumps(result)
+
+
+def get_available_main_views() -> str:
+    """Get the canonical Ableton view names accepted by view control tools."""
+    result = get_connection().send_command("get_available_main_views", {})
+    return json.dumps(result)
+
+
+def is_view_visible(view_name: str) -> str:
+    """Get whether an Ableton view is currently visible.
+
+    Args:
+        view_name: View name such as 'Browser', 'Arranger', 'Session',
+                   'Detail', 'Detail/Clip', or 'Detail/DeviceChain'.
+    """
+    result = get_connection().send_command("is_view_visible", {"view_name": view_name})
+    return json.dumps(result)
+
+
+def show_view(view_name: str) -> str:
+    """Show an Ableton UI view.
+
+    Args:
+        view_name: View name such as 'Browser', 'Arranger', 'Session',
+                   'Detail', 'Detail/Clip', or 'Detail/DeviceChain'.
+    """
+    result = get_connection().send_command("show_view", {"view_name": view_name})
+    return json.dumps(result)
+
+
+def hide_view(view_name: str) -> str:
+    """Hide an Ableton UI view.
+
+    Args:
+        view_name: View name such as 'Browser', 'Arranger', 'Session',
+                   'Detail', 'Detail/Clip', or 'Detail/DeviceChain'.
+    """
+    result = get_connection().send_command("hide_view", {"view_name": view_name})
+    return json.dumps(result)
+
+
+def focus_view(view_name: str) -> str:
+    """Show and focus an Ableton UI view.
+
+    Args:
+        view_name: View name such as 'Browser', 'Arranger', 'Session',
+                   'Detail', 'Detail/Clip', or 'Detail/DeviceChain'.
+    """
+    result = get_connection().send_command("focus_view", {"view_name": view_name})
+    return json.dumps(result)
+
+
+def toggle_browse() -> str:
+    """Toggle Ableton's browser hot-swap mode for the selected device."""
+    result = get_connection().send_command("toggle_browse", {})
+    return json.dumps(result)
+
+
 def get_record_mode() -> str:
     """Get whether arrangement recording is armed.
 
     Returns record_mode (True if armed, False otherwise).
     """
     result = get_connection().send_command("get_record_mode", {})
+    return json.dumps(result)
+
+
+def get_link_state() -> str:
+    """Get Ableton Link and Tempo Follower state."""
+    result = get_connection().send_command("get_link_state", {})
+    return json.dumps(result)
+
+
+def set_ableton_link_enabled(enabled: bool) -> str:
+    """Enable or disable Ableton Link.
+
+    Args:
+        enabled: True to enable Link, False to disable it.
+    """
+    result = get_connection().send_command("set_ableton_link_enabled", {"enabled": enabled})
+    return json.dumps(result)
+
+
+def set_ableton_link_start_stop_sync_enabled(enabled: bool) -> str:
+    """Enable or disable Ableton Link Start/Stop Sync.
+
+    Args:
+        enabled: True to enable Start/Stop Sync, False to disable it.
+    """
+    result = get_connection().send_command(
+        "set_ableton_link_start_stop_sync_enabled",
+        {"enabled": enabled},
+    )
+    return json.dumps(result)
+
+
+def set_tempo_follower_enabled(enabled: bool) -> str:
+    """Enable or disable Tempo Follower.
+
+    Args:
+        enabled: True to enable Tempo Follower, False to disable it.
+    """
+    result = get_connection().send_command("set_tempo_follower_enabled", {"enabled": enabled})
+    return json.dumps(result)
+
+
+def get_count_in_state() -> str:
+    """Get metronome count-in settings and current counting-in state."""
+    result = get_connection().send_command("get_count_in_state", {})
+    return json.dumps(result)
+
+
+def get_session_record_status() -> str:
+    """Get Session Record state and current record status."""
+    result = get_connection().send_command("get_session_record_status", {})
+    return json.dumps(result)
+
+
+def set_session_record(enabled: bool) -> str:
+    """Enable or disable Session Record.
+
+    Args:
+        enabled: True to enable Session Record, False to disable it.
+    """
+    result = get_connection().send_command("set_session_record", {"enabled": enabled})
     return json.dumps(result)
 
 
@@ -380,6 +522,38 @@ def get_view_state() -> str:
     Returns the selected track, detail clip (if any), draw mode, and follow song state.
     """
     result = get_connection().send_command("get_view_state", {})
+    return json.dumps(result)
+
+
+def get_selected_device() -> str:
+    """Get the currently selected device on the selected track."""
+    result = get_connection().send_command("get_selected_device", {})
+    return json.dumps(result)
+
+
+def select_device(track_index: int, device_index: int) -> str:
+    """Select a device on a track in Ableton's UI.
+
+    Args:
+        track_index: Zero-based index of the track.
+        device_index: Zero-based index of the device in the track's device chain.
+    """
+    result = get_connection().send_command("select_device", {
+        "track_index": track_index,
+        "device_index": device_index,
+    })
+    return json.dumps(result)
+
+
+def get_selected_parameter() -> str:
+    """Get the currently selected Ableton device parameter."""
+    result = get_connection().send_command("get_selected_parameter", {})
+    return json.dumps(result)
+
+
+def get_selected_chain() -> str:
+    """Get the currently selected rack chain in Ableton's UI."""
+    result = get_connection().send_command("get_selected_chain", {})
     return json.dumps(result)
 
 
@@ -566,12 +740,32 @@ TOOLS = [
     set_scene_tempo,
     set_scene_time_signature,
     get_application_info,
+    get_application_dialog,
+    press_current_dialog_button,
+    get_application_cpu_usage,
+    get_available_main_views,
+    is_view_visible,
+    show_view,
+    hide_view,
+    focus_view,
+    toggle_browse,
     get_record_mode,
+    get_link_state,
+    set_ableton_link_enabled,
+    set_ableton_link_start_stop_sync_enabled,
+    set_tempo_follower_enabled,
+    get_count_in_state,
+    get_session_record_status,
+    set_session_record,
     set_record_mode,
     capture_and_insert_scene,
     create_locator,
     delete_locator,
     get_view_state,
+    get_selected_device,
+    select_device,
+    get_selected_parameter,
+    get_selected_chain,
     set_follow_song,
     set_draw_mode,
     select_clip_in_detail,

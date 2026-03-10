@@ -37,6 +37,45 @@ def _serialize_device(device, device_index):
     }
 
 
+def _serialize_arrangement_clip(clip):
+    """Serialize an arrangement or take-lane clip."""
+    return {
+        "name": clip.name,
+        "start_time": clip.start_time,
+        "end_time": clip.end_time,
+        "length": clip.length,
+        "is_audio_clip": clip.is_audio_clip,
+        "is_midi_clip": clip.is_midi_clip,
+        "muted": clip.muted,
+        "color": clip.color,
+        "color_index": clip.color_index,
+        "looping": clip.looping,
+    }
+
+
+def _get_take_lanes(track):
+    """Return take lanes for a track or raise a clear error if unsupported."""
+    take_lanes = getattr(track, "take_lanes", None)
+    if take_lanes is None:
+        raise ValueError("Take lanes are not available on this track or Live version")
+    return list(take_lanes)
+
+
+def _serialize_take_lane(lane, lane_index):
+    """Serialize a take lane and its arrangement clips."""
+    clips = []
+    for clip_index, clip in enumerate(lane.arrangement_clips):
+        clip_info = _serialize_arrangement_clip(clip)
+        clip_info["index"] = clip_index
+        clips.append(clip_info)
+    return {
+        "index": lane_index,
+        "name": lane.name,
+        "clip_count": len(clips),
+        "clips": clips,
+    }
+
+
 def get_track_info(control_surface, params):
     """Return detailed info about a specific track."""
     track_index = params.get("track_index")
@@ -677,6 +716,152 @@ def set_track_properties(control_surface, params):
     return result
 
 
+def get_take_lanes(control_surface, params):
+    """Return all take lanes for a track."""
+    track_index = params.get("track_index")
+    if track_index is None:
+        raise ValueError("Missing required parameter: track_index")
+    track_index = int(track_index)
+    song = control_surface.song()
+
+    if track_index < 0 or track_index >= len(song.tracks):
+        raise ValueError("Track index {0} out of range (0-{1})".format(
+            track_index, len(song.tracks) - 1))
+
+    track = song.tracks[track_index]
+    take_lanes = _get_take_lanes(track)
+    return {
+        "track_index": track_index,
+        "track_name": track.name,
+        "take_lanes": [_serialize_take_lane(lane, i) for i, lane in enumerate(take_lanes)],
+    }
+
+
+def create_take_lane(control_surface, params):
+    """Create a take lane on a track."""
+    track_index = params.get("track_index")
+    if track_index is None:
+        raise ValueError("Missing required parameter: track_index")
+    track_index = int(track_index)
+    song = control_surface.song()
+
+    if track_index < 0 or track_index >= len(song.tracks):
+        raise ValueError("Track index {0} out of range (0-{1})".format(
+            track_index, len(song.tracks) - 1))
+
+    track = song.tracks[track_index]
+    before = _get_take_lanes(track)
+    created_lane = track.create_take_lane()
+    after = _get_take_lanes(track)
+    if len(after) <= len(before):
+        raise ValueError("Ableton did not create a new take lane")
+
+    lane = None
+    lane_index = len(after) - 1
+    if created_lane is not None:
+        try:
+            lane_index = after.index(created_lane)
+            lane = created_lane
+        except ValueError:
+            lane = None
+    if lane is None:
+        lane = after[lane_index]
+
+    result = _serialize_take_lane(lane, lane_index)
+    result["track_index"] = track_index
+    result["track_name"] = track.name
+    return result
+
+
+def create_take_lane_midi_clip(control_surface, params):
+    """Create a MIDI clip inside a take lane."""
+    track_index = params.get("track_index")
+    take_lane_index = params.get("take_lane_index")
+    start_time = params.get("start_time")
+    length = params.get("length")
+    if track_index is None:
+        raise ValueError("Missing required parameter: track_index")
+    if take_lane_index is None:
+        raise ValueError("Missing required parameter: take_lane_index")
+    if start_time is None:
+        raise ValueError("Missing required parameter: start_time")
+    if length is None:
+        raise ValueError("Missing required parameter: length")
+
+    track_index = int(track_index)
+    take_lane_index = int(take_lane_index)
+    start_time = float(start_time)
+    length = float(length)
+    song = control_surface.song()
+
+    if track_index < 0 or track_index >= len(song.tracks):
+        raise ValueError("Track index {0} out of range (0-{1})".format(
+            track_index, len(song.tracks) - 1))
+
+    track = song.tracks[track_index]
+    take_lanes = _get_take_lanes(track)
+    if take_lane_index < 0 or take_lane_index >= len(take_lanes):
+        raise ValueError("Take lane index {0} out of range (0-{1})".format(
+            take_lane_index, len(take_lanes) - 1))
+
+    lane = take_lanes[take_lane_index]
+    before_count = len(lane.arrangement_clips)
+    created_clip = lane.create_midi_clip(start_time, length)
+    after_clips = list(lane.arrangement_clips)
+    if len(after_clips) <= before_count:
+        raise ValueError("Ableton did not create a MIDI clip in the take lane")
+
+    clip = created_clip if created_clip is not None else after_clips[-1]
+    clip_info = _serialize_arrangement_clip(clip)
+    clip_info["track_index"] = track_index
+    clip_info["take_lane_index"] = take_lane_index
+    return clip_info
+
+
+def create_take_lane_audio_clip(control_surface, params):
+    """Create an audio clip inside a take lane."""
+    track_index = params.get("track_index")
+    take_lane_index = params.get("take_lane_index")
+    file_path = params.get("file_path")
+    start_time = params.get("start_time")
+    if track_index is None:
+        raise ValueError("Missing required parameter: track_index")
+    if take_lane_index is None:
+        raise ValueError("Missing required parameter: take_lane_index")
+    if file_path is None:
+        raise ValueError("Missing required parameter: file_path")
+    if start_time is None:
+        raise ValueError("Missing required parameter: start_time")
+
+    track_index = int(track_index)
+    take_lane_index = int(take_lane_index)
+    start_time = float(start_time)
+    song = control_surface.song()
+
+    if track_index < 0 or track_index >= len(song.tracks):
+        raise ValueError("Track index {0} out of range (0-{1})".format(
+            track_index, len(song.tracks) - 1))
+
+    track = song.tracks[track_index]
+    take_lanes = _get_take_lanes(track)
+    if take_lane_index < 0 or take_lane_index >= len(take_lanes):
+        raise ValueError("Take lane index {0} out of range (0-{1})".format(
+            take_lane_index, len(take_lanes) - 1))
+
+    lane = take_lanes[take_lane_index]
+    before_count = len(lane.arrangement_clips)
+    created_clip = lane.create_audio_clip(str(file_path), start_time)
+    after_clips = list(lane.arrangement_clips)
+    if len(after_clips) <= before_count:
+        raise ValueError("Ableton did not create an audio clip in the take lane")
+
+    clip = created_clip if created_clip is not None else after_clips[-1]
+    clip_info = _serialize_arrangement_clip(clip)
+    clip_info["track_index"] = track_index
+    clip_info["take_lane_index"] = take_lane_index
+    return clip_info
+
+
 READ_HANDLERS = {
     "get_track_info": get_track_info,
     "get_return_tracks": get_return_tracks,
@@ -686,6 +871,7 @@ READ_HANDLERS = {
     "get_track_freeze_status": get_track_freeze_status,
     "get_clip_slot_status": get_clip_slot_status,
     "get_return_track_sends": get_return_track_sends,
+    "get_take_lanes": get_take_lanes,
 }
 
 WRITE_HANDLERS = {
@@ -709,4 +895,7 @@ WRITE_HANDLERS = {
     "set_clip_slot_color": set_clip_slot_color,
     "set_return_track_send": set_return_track_send,
     "set_track_properties": set_track_properties,
+    "create_take_lane": create_take_lane,
+    "create_take_lane_midi_clip": create_take_lane_midi_clip,
+    "create_take_lane_audio_clip": create_take_lane_audio_clip,
 }
