@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "livemcp"
-version = "1.2.4"
+version = "1.2.5"
 description = "The definitive Model Context Protocol bridge for Ableton Live"
 readme = "README.md"
 license = {text = "MIT"}

@@ -122,6 +122,14 @@ def _remove_old(target_dir):
         print("Note: Found AbletonMCP directory. Not removing — delete manually if desired.")
 
 
+def _copy_remote_script(source: Path, dest: Path) -> None:
+    shutil.copytree(
+        source,
+        dest,
+        ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "*.pyo"),
+    )
+
+
 def _iter_remote_script_files(path: Path):
     if not path.is_dir():
         return []
@@ -230,7 +238,7 @@ def install(use_symlink: bool | None = None):
         os.symlink(source, dest)
         print(f"Symlinked: {dest} -> {source}")
     else:
-        shutil.copytree(source, dest)
+        _copy_remote_script(source, dest)
         count = sum(1 for _ in dest.rglob("*.py"))
         print(f"Copied {count} files to: {dest}")
 

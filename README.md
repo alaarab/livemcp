@@ -1,8 +1,8 @@
 # LiveMCP
 
-MCP server that exposes Ableton Live's internal Python API to AI assistants. 200 tools across 7 categories: session, clips, tracks, devices, mixer, arrangement, grooves.
+MCP server that exposes Ableton Live's internal Python API to AI assistants. 201 tools across 7 categories: session, clips, tracks, devices, mixer, arrangement, grooves.
 
-[![Tools](https://img.shields.io/badge/Tools-200-blueviolet)](https://github.com/alaarab/livemcp) [![Python](https://img.shields.io/badge/Python-3.10+-3776AB)](https://python.org) [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+[![Tools](https://img.shields.io/badge/Tools-201-blueviolet)](https://github.com/alaarab/livemcp) [![Python](https://img.shields.io/badge/Python-3.10+-3776AB)](https://python.org) [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
 ## Quick Start
 
@@ -70,17 +70,17 @@ Config file locations:
 
 | Category | Count |
 |----------|------:|
-| Session | 73 |
+| Session | 74 |
 | Clips | 40 |
 | Tracks | 32 |
 | Devices | 27 |
 | Mixer | 14 |
 | Arrangement | 9 |
 | Grooves | 5 |
-| **Total** | **200** |
+| **Total** | **201** |
 
 <details>
-<summary>Session Tools (73)</summary>
+<summary>Session Tools (74)</summary>
 
 | Tool | Description |
 |------|-------------|
@@ -118,6 +118,7 @@ Config file locations:
 | `set_groove_amount` / `set_scale` | Global groove and scale |
 | `get_application_info` | Live version (major, minor, bugfix) |
 | `get_livemcp_info` | Remote-script transport protocol version and capability flags |
+| `get_livemcp_status` | Combined local install state, remote reachability, and transport warnings |
 | `get_application_dialog` / `press_current_dialog_button` | Inspect and control Ableton dialog boxes |
 | `get_application_cpu_usage` | Average and peak Live CPU usage |
 | `get_available_main_views` / `is_view_visible` | Discover valid view names and visibility |
@@ -271,7 +272,7 @@ Config file locations:
 │                   MCP Server                             │
 │            src/livemcp/ (FastMCP)                        │
 │                                                          │
-│   200 tool functions with type hints + docstrings        │
+│   201 tool functions with type hints + docstrings        │
 │   7 modules: session, tracks, clips, devices,            │
 │              mixer, arrangement, grooves                 │
 └────────────────────────┬────────────────────────────────┘
@@ -331,7 +332,7 @@ livemcp/
 │   ├── server.py             # FastMCP app, registers all tool modules
 │   ├── connection.py         # TCP client to remote script
 │   └── tools/                # 7 tool modules
-│       ├── session.py        # 73 session tools
+│       ├── session.py        # 74 session tools
 │       ├── clips.py          # 40 clip tools
 │       ├── tracks.py         # 32 track tools
 │       ├── devices.py        # 27 device tools
