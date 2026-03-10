@@ -296,13 +296,17 @@ git clone https://github.com/alaarab/livemcp.git
 cd livemcp
 
 # Install remote script into Ableton
-python scripts/install.py
+uv run livemcp --install
+# or: bash scripts/install.sh
 
 # Run the MCP server locally
 uv run livemcp
 
 # Restart Ableton and wait for LiveMCP to come back
 uv run livemcp --restart-ableton
+
+# Build, test, and publish the current version
+bash scripts/publish.sh --dry-run
 
 # Verify tool count
 uv run python -c "from livemcp.server import mcp; print(len(mcp._tool_manager._tools), 'tools')"
@@ -330,6 +334,7 @@ livemcp/
 │   └── handlers/             # 7 handler modules (matching tools/)
 └── scripts/
     ├── install.sh            # Wrapper for `uv run livemcp --install`
+    ├── publish.sh            # Test/build/publish helper
     ├── uninstall.sh          # Wrapper for `uv run livemcp --uninstall`
     └── restart_ableton.sh    # Wrapper for `uv run livemcp --restart-ableton`
 ```
