@@ -36,6 +36,21 @@ That's it. Works on macOS, Windows, and WSL. Auto-detects your Ableton installat
 }
 ```
 
+### Ableton Lifecycle Helpers (macOS)
+
+Use the packaged helper when Live gets stuck on save, crash-recovery, or restore prompts:
+
+```bash
+uv run livemcp --restart-ableton
+uv run livemcp --launch-ableton
+uv run livemcp --quit-ableton
+```
+
+`--restart-ableton` clears `remote_script/__pycache__`, removes Ableton crash-recovery markers
+from `~/Library/Preferences/Ableton/Live */`, quits Live, relaunches the detected Ableton app,
+accepts common crash/restore dialogs when macOS Accessibility is available, and waits for the
+LiveMCP socket on port `9877`.
+
 Config file locations:
 
 | OS | Path |
@@ -270,6 +285,9 @@ python scripts/install.py
 
 # Run the MCP server locally
 uv run livemcp
+
+# Restart Ableton and wait for LiveMCP to come back
+uv run livemcp --restart-ableton
 
 # Verify tool count
 uv run python -c "from livemcp.server import mcp; print(len(mcp._tool_manager._tools), 'tools')"
