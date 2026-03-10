@@ -106,9 +106,20 @@ def _version_key(path: Path) -> tuple[int, ...]:
     return tuple(int(part) for part in match.group(1).split("."))
 
 
-def find_ableton_preferences_dir() -> Path | None:
-    """Return the newest Ableton preferences directory."""
-    prefs_root = Path.home() / "Library" / "Preferences" / "Ableton"
+def _version_prefix_matches(version: tuple[int, ...], prefix: tuple[int, ...]) -> bool:
+    return version[: len(prefix)] == prefix
+
+
+def _version_from_app_name(app_name: str) -> tuple[int, ...]:
+    return _parse_ableton_label(app_name.removeprefix("Ableton "))[0]
+
+
+def find_ableton_preferences_dir(
+    app_name: str | None = None,
+    prefs_root: Path | None = None,
+) -> Path | None:
+    """Return the newest Ableton preferences directory, optionally scoped to an app version."""
+    prefs_root = prefs_root or Path.home() / "Library" / "Preferences" / "Ableton"
     if not prefs_root.is_dir():
         return None
 
@@ -116,12 +127,20 @@ def find_ableton_preferences_dir() -> Path | None:
     if not candidates:
         return None
 
+    if app_name is not None:
+        requested_version = _version_from_app_name(app_name)
+        version_matches = [
+            path for path in candidates if _version_prefix_matches(_version_key(path), requested_version)
+        ]
+        if version_matches:
+            candidates = version_matches
+
     return max(candidates, key=_version_key)
 
 
-def clear_recovery_state() -> None:
+def clear_recovery_state(app_name: str | None = None) -> None:
     """Remove recovery markers so Live starts without restore prompts."""
-    prefs_dir = find_ableton_preferences_dir()
+    prefs_dir = find_ableton_preferences_dir(app_name=app_name)
     if prefs_dir is None:
         return
 
@@ -310,16 +329,16 @@ def force_kill() -> None:
     subprocess.run(["pkill", "-9", "-x", PROCESS_NAME], check=False, capture_output=True, text=True)
 
 
-def launch_ableton() -> str:
+def launch_ableton(app_name: str | None = None) -> str:
     """Launch the detected Ableton app."""
-    app_name = find_ableton_app()
+    app_name = app_name or find_ableton_app()
     subprocess.run(["open", "-a", app_name], check=True)
     return app_name
 
 
-def quit_ableton(force: bool = True) -> None:
+def quit_ableton(force: bool = True, app_name: str | None = None) -> None:
     """Quit Ableton and dismiss save prompts."""
-    app_name = find_ableton_app()
+    app_name = app_name or find_ableton_app()
     _launch_osascript(f'tell application "{app_name}" to quit')
     time.sleep(0.5)
 
@@ -385,12 +404,13 @@ def wait_for_livemcp_socket(
 
 def restart_ableton() -> str:
     """Restart Ableton with fresh remote-script bytecode and wait for LiveMCP."""
+    app_name = find_ableton_app()
     clear_remote_script_pycache()
     if is_process_running():
-        quit_ableton(force=True)
+        quit_ableton(force=True, app_name=app_name)
 
-    clear_recovery_state()
-    app_name = launch_ableton()
+    clear_recovery_state(app_name=app_name)
+    launch_ableton(app_name=app_name)
     if not wait_for_livemcp_socket(dialog_button_names=STARTUP_DIALOG_BUTTONS):
         raise RuntimeError(
             f"LiveMCP socket {DEFAULT_HOST}:{DEFAULT_PORT} did not become ready after restart"

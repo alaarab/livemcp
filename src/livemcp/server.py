@@ -1,5 +1,7 @@
 """LiveMCP — FastMCP server that exposes Ableton Live tools over MCP."""
 
+import argparse
+
 from mcp.server.fastmcp import FastMCP
 
 from .tools import session, tracks, clips, devices, mixer, arrangement, grooves
@@ -48,30 +50,52 @@ for _fn in _all_tools:
     mcp.tool()(_fn)
 
 
-def main():
-    """Entry point — run the MCP server over stdio, or handle install/uninstall."""
-    import sys
+def _build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="LiveMCP MCP server and Ableton helpers")
+    actions = parser.add_mutually_exclusive_group()
+    actions.add_argument("--install", action="store_true", help="Install the LiveMCP remote script")
+    actions.add_argument("--uninstall", action="store_true", help="Uninstall the LiveMCP remote script")
+    actions.add_argument("--restart-ableton", action="store_true", help="Restart Ableton and wait for LiveMCP")
+    actions.add_argument("--launch-ableton", action="store_true", help="Launch Ableton")
+    actions.add_argument("--quit-ableton", action="store_true", help="Quit Ableton")
+    parser.add_argument(
+        "--no-force",
+        action="store_true",
+        help="Do not force-kill Ableton if a quit request stalls; only valid with --quit-ableton",
+    )
+    return parser
 
-    if "--install" in sys.argv:
+
+def main(argv: list[str] | None = None):
+    """Entry point — run the MCP server over stdio, or handle install/uninstall."""
+    parser = _build_parser()
+    args = parser.parse_args(argv)
+
+    if args.no_force and not args.quit_ableton:
+        parser.error("--no-force can only be used with --quit-ableton")
+
+    if args.install:
         from .installer import install
+
         install()
-    elif "--uninstall" in sys.argv:
+    elif args.uninstall:
         from .installer import uninstall
+
         uninstall()
-    elif "--restart-ableton" in sys.argv:
+    elif args.restart_ableton:
         from .ableton import restart_ableton
 
         app_name = restart_ableton()
         print(f"Restarted {app_name} and confirmed LiveMCP is reachable on port 9877.")
-    elif "--launch-ableton" in sys.argv:
+    elif args.launch_ableton:
         from .ableton import launch_ableton
 
         app_name = launch_ableton()
         print(f"Launched {app_name}.")
-    elif "--quit-ableton" in sys.argv:
+    elif args.quit_ableton:
         from .ableton import quit_ableton
 
-        quit_ableton(force="--no-force" not in sys.argv)
+        quit_ableton(force=not args.no_force)
         print("Quit Ableton Live.")
     else:
         mcp.run(transport="stdio")
