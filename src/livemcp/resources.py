@@ -6,6 +6,7 @@ from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
+from .docs import DocsIndex
 from .connection import get_connection
 from .tools import session
 
@@ -27,6 +28,18 @@ def _read_device_display_values(track_index: int, device_index: int) -> dict[str
         "get_device_display_values",
         {"track_index": track_index, "device_index": device_index},
     )
+
+
+def _read_docs_status() -> dict[str, Any]:
+    return DocsIndex().get_status()
+
+
+def _read_docs_chunk(chunk_id: int) -> dict[str, Any]:
+    return DocsIndex().get_chunk(chunk_id)
+
+
+def _read_docs_page(page_id: int) -> dict[str, Any]:
+    return DocsIndex().get_page(page_id)
 
 
 def register_resources(mcp: FastMCP) -> None:
@@ -151,3 +164,33 @@ def register_resources(mcp: FastMCP) -> None:
     )
     def device(track_index: int, device_index: int) -> dict[str, Any]:
         return _read_device_display_values(track_index, device_index)
+
+    @mcp.resource(
+        "docs://status",
+        name="docs_status_resource",
+        title="Docs Status",
+        description="Status of the local Ableton and Max docs index.",
+        mime_type="application/json",
+    )
+    def docs_status() -> dict[str, Any]:
+        return _read_docs_status()
+
+    @mcp.resource(
+        "docs://chunk/{chunk_id}",
+        name="docs_chunk_resource",
+        title="Docs Chunk",
+        description="A single chunk from the local synced docs index.",
+        mime_type="application/json",
+    )
+    def docs_chunk(chunk_id: int) -> dict[str, Any]:
+        return _read_docs_chunk(chunk_id)
+
+    @mcp.resource(
+        "docs://page/{page_id}",
+        name="docs_page_resource",
+        title="Docs Page",
+        description="A full page from the local synced docs index.",
+        mime_type="application/json",
+    )
+    def docs_page(page_id: int) -> dict[str, Any]:
+        return _read_docs_page(page_id)
