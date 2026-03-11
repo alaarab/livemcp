@@ -9,7 +9,7 @@ It gives an MCP client two useful layers:
 
 The point is control and inspection. LiveMCP is built for tasks like selecting tracks, focusing views, firing clips, changing device parameters, checking transport state, handling startup dialogs, and keeping the remote script in sync with the package. It is not trying to be an AI songwriter.
 
-[![Tools](https://img.shields.io/badge/Tools-201-blueviolet)](https://github.com/alaarab/livemcp) [![Python](https://img.shields.io/badge/Python-3.10+-3776AB)](https://python.org) [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+[![Tools](https://img.shields.io/badge/Tools-205-blueviolet)](https://github.com/alaarab/livemcp) [![Python](https://img.shields.io/badge/Python-3.10+-3776AB)](https://python.org) [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
 ## What It Is
 
@@ -25,8 +25,9 @@ The point is control and inspection. LiveMCP is built for tasks like selecting t
 
 ## At A Glance
 
-- `201` tools across session, clips, tracks, devices, mixer, arrangement, and grooves
+- `205` tools across session, clips, tracks, devices, mixer, arrangement, grooves, and docs
 - controller-oriented MCP resources like `live://status`, `live://view/current`, and `live://track/{track_index}`
+- local docs sync and offline search across official Ableton and Cycling '74 documentation
 - packaged install-status and Ableton restart helpers
 - install support for macOS, Windows, and WSL
 - macOS-only lifecycle automation for restart / quit / prompt handling
@@ -87,8 +88,47 @@ Once the server is running, the most useful starting points are:
 - read `live://status`
 - read `live://session/current`
 - read `live://view/current`
+- read `docs://status`
 - call `get_session_info`
 - call `show_view("Session")` or `focus_view("Browser")`
+- call `search_docs("warp markers live.object")` after syncing docs
+
+## Local Docs Sync
+
+If you want a local searchable snapshot of the docs you actually build against, sync them once:
+
+```bash
+uv run livemcp --sync-docs
+```
+
+That crawls the configured official sources, stores raw HTML under `~/.cache/livemcp/docs/raw/`,
+and builds a local SQLite full-text index at `~/.cache/livemcp/docs/docs.sqlite3`.
+
+Current sources:
+
+- `ableton-live-manual-12`
+- `cycling74-max-docs`
+
+You can sync just one source:
+
+```bash
+uv run livemcp --sync-docs --docs-source ableton-live-manual-12
+```
+
+Check local docs status:
+
+```bash
+uv run livemcp --docs-status
+```
+
+After syncing, use:
+
+- `search_docs(query, source_id="all", limit=8)`
+- `get_docs_chunk(chunk_id)`
+- `get_docs_page(page_id)`
+- `docs://status`
+- `docs://chunk/{chunk_id}`
+- `docs://page/{page_id}`
 
 ## Resources vs Tools
 
@@ -136,12 +176,13 @@ Config file locations:
 
 ## Capability Map
 
-You do not need to memorize 201 commands to use LiveMCP well. The useful mental model is:
+You do not need to memorize 205 commands to use LiveMCP well. The useful mental model is:
 
 - session tools for transport, selection, views, dialogs, and global state
 - track and mixer tools for routing, arm/solo/mute, levels, and return paths
 - device tools for loading instruments/effects and changing parameters
 - clip and arrangement tools for manipulating content that already exists in the set
+- docs tools for searching local snapshots of official Ableton and Max documentation
 - resources when you want a stable read surface for the current state
 
 The tables below are the full reference.
@@ -155,7 +196,8 @@ The tables below are the full reference.
 | Mixer | 14 |
 | Arrangement | 9 |
 | Grooves | 5 |
-| **Total** | **201** |
+| Docs | 4 |
+| **Total** | **205** |
 
 ## MCP Resources
 
@@ -173,6 +215,7 @@ These are meant for controller-style reads where a client wants stable Ableton s
 | `live://selection/scene` | Currently selected scene |
 | `live://selection/device` | Currently selected device |
 | `live://application/dialog` | Current Ableton dialog state |
+| `docs://status` | Local docs index status and synced source coverage |
 
 ### Resource Templates
 
@@ -182,6 +225,8 @@ These are meant for controller-style reads where a client wants stable Ableton s
 | `live://scene/{scene_index}` | Detailed scene state |
 | `live://scene/{scene_index}/clips` | Scene clip-slot state across all tracks |
 | `live://device/{track_index}/{device_index}` | Device parameters with display values |
+| `docs://chunk/{chunk_id}` | One indexed docs chunk from the local snapshot |
+| `docs://page/{page_id}` | One full docs page from the local snapshot |
 
 <details>
 <summary>Session Tools (74)</summary>
@@ -376,7 +421,7 @@ These are meant for controller-style reads where a client wants stable Ableton s
 │                Package-Side MCP Server                   │
 │            src/livemcp/ (FastMCP)                        │
 │                                                          │
-│   201 tools + live:// resources                          │
+│   205 tools + live:// and docs:// resources              │
 │   structured controller state + action calls             │
 └────────────────────────┬────────────────────────────────┘
                          │ TCP Socket (localhost:9877)

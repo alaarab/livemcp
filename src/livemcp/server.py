@@ -4,8 +4,9 @@ import argparse
 
 from mcp.server.fastmcp import FastMCP
 
+from .docs import DOC_SOURCES, DocsIndex, sync_docs
 from .resources import register_resources
-from .tools import session, tracks, clips, devices, mixer, arrangement, grooves
+from .tools import session, tracks, clips, devices, mixer, arrangement, grooves, docs
 
 mcp = FastMCP(
     "LiveMCP",
@@ -46,6 +47,7 @@ _all_tools = _collect_tools(
     mixer.TOOLS,
     arrangement.TOOLS,
     grooves.TOOLS,
+    docs.TOOLS,
 )
 
 for _fn in _all_tools:
@@ -63,6 +65,16 @@ def _build_parser() -> argparse.ArgumentParser:
     actions.add_argument("--restart-ableton", action="store_true", help="Restart Ableton and wait for LiveMCP")
     actions.add_argument("--launch-ableton", action="store_true", help="Launch Ableton")
     actions.add_argument("--quit-ableton", action="store_true", help="Quit Ableton")
+    actions.add_argument(
+        "--sync-docs",
+        action="store_true",
+        help="Sync official Ableton and Cycling '74 docs into the local search index",
+    )
+    actions.add_argument(
+        "--docs-status",
+        action="store_true",
+        help="Show local docs index status",
+    )
     parser.add_argument(
         "--no-force",
         action="store_true",
@@ -72,6 +84,12 @@ def _build_parser() -> argparse.ArgumentParser:
         "--symlink-install",
         action="store_true",
         help="Symlink the remote script into Ableton instead of copying it; only valid with --install",
+    )
+    parser.add_argument(
+        "--docs-source",
+        action="append",
+        choices=sorted(DOC_SOURCES),
+        help="Limit docs sync to one or more configured source ids; only valid with --sync-docs",
     )
     return parser
 
@@ -85,6 +103,8 @@ def main(argv: list[str] | None = None):
         parser.error("--no-force can only be used with --quit-ableton")
     if args.symlink_install and not args.install:
         parser.error("--symlink-install can only be used with --install")
+    if args.docs_source and not args.sync_docs:
+        parser.error("--docs-source can only be used with --sync-docs")
 
     if args.install:
         from .installer import install
@@ -114,5 +134,11 @@ def main(argv: list[str] | None = None):
 
         quit_ableton(force=not args.no_force)
         print("Quit Ableton Live.")
+    elif args.sync_docs:
+        import json
+
+        print(json.dumps(sync_docs(source_ids=args.docs_source), indent=2))
+    elif args.docs_status:
+        print(DocsIndex().dumps_status())
     else:
         mcp.run(transport="stdio")

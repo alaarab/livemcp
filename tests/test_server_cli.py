@@ -48,6 +48,30 @@ class ServerCliTests(unittest.TestCase):
 
         self.assertEqual(context.exception.code, 2)
 
+    @mock.patch("livemcp.server.sync_docs", return_value={"sources": [{"page_count": 2}]})
+    def test_main_syncs_docs(self, sync_docs):
+        with mock.patch("sys.stdout", new=io.StringIO()) as stdout:
+            server.main(["--sync-docs", "--docs-source", "ableton-live-manual-12"])
+
+        sync_docs.assert_called_once_with(source_ids=["ableton-live-manual-12"])
+        self.assertIn('"page_count": 2', stdout.getvalue())
+
+    @mock.patch("livemcp.server.DocsIndex")
+    def test_main_prints_docs_status(self, docs_index):
+        docs_index.return_value.dumps_status.return_value = '{"total_pages": 10}'
+
+        with mock.patch("sys.stdout", new=io.StringIO()) as stdout:
+            server.main(["--docs-status"])
+
+        self.assertIn('"total_pages": 10', stdout.getvalue())
+
+    def test_main_rejects_docs_source_without_sync(self):
+        with self.assertRaises(SystemExit) as context:
+            with mock.patch("sys.stderr", new=io.StringIO()):
+                server.main(["--docs-source", "ableton-live-manual-12"])
+
+        self.assertEqual(context.exception.code, 2)
+
 
 if __name__ == "__main__":
     unittest.main()

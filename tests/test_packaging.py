@@ -28,6 +28,9 @@ class PackagingTests(unittest.TestCase):
             self.assertIn("livemcp/remote_script/__init__.py", wheel_files)
             self.assertIn("livemcp/remote_script/server.py", wheel_files)
             self.assertIn("livemcp/remote_script/handlers/session.py", wheel_files)
+            self.assertIn("livemcp/docs/__init__.py", wheel_files)
+            self.assertIn("livemcp/docs/sync.py", wheel_files)
+            self.assertIn("livemcp/tools/docs.py", wheel_files)
 
 
 if __name__ == "__main__":

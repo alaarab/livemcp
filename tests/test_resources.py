@@ -26,6 +26,9 @@ class ResourceTests(unittest.TestCase):
         self.assertIn("live://track/{track_index}", template_uris)
         self.assertIn("live://scene/{scene_index}", template_uris)
         self.assertIn("live://device/{track_index}/{device_index}", template_uris)
+        self.assertIn("docs://status", resource_uris)
+        self.assertIn("docs://chunk/{chunk_id}", template_uris)
+        self.assertIn("docs://page/{page_id}", template_uris)
 
     @mock.patch("livemcp.resources.session.get_livemcp_status")
     def test_reads_fixed_status_resource(self, get_livemcp_status):
@@ -55,6 +58,34 @@ class ResourceTests(unittest.TestCase):
 
         read_track_info.assert_called_once_with(3)
         self.assertEqual(payload["name"], "Track 4")
+
+    @mock.patch("livemcp.resources._read_docs_status")
+    def test_reads_docs_status_resource(self, read_docs_status):
+        read_docs_status.return_value = {
+            "docs_root": "/tmp/livemcp-docs",
+            "total_pages": 42,
+            "total_chunks": 84,
+            "configured_sources": [],
+        }
+
+        contents = anyio.run(server.mcp.read_resource, "docs://status")
+        payload = json.loads(contents[0].content)
+
+        self.assertEqual(payload["total_pages"], 42)
+
+    @mock.patch("livemcp.resources._read_docs_chunk")
+    def test_reads_docs_chunk_template_resource(self, read_docs_chunk):
+        read_docs_chunk.return_value = {
+            "chunk_id": 7,
+            "title": "Live API Overview",
+            "content": "Properties and functions are exposed through live.object.",
+        }
+
+        contents = anyio.run(server.mcp.read_resource, "docs://chunk/7")
+        payload = json.loads(contents[0].content)
+
+        read_docs_chunk.assert_called_once_with(7)
+        self.assertEqual(payload["chunk_id"], 7)
 
 
 if __name__ == "__main__":
