@@ -7,14 +7,17 @@ from mcp.server.fastmcp import FastMCP
 from .docs import DOC_SOURCES, DocsIndex, sync_docs
 from .resources import register_resources
 from .tools import session, tracks, clips, devices, mixer, arrangement, grooves, docs
+from .tools import max as max_tools
 
 mcp = FastMCP(
     "LiveMCP",
     instructions=(
         "Control and inspect Ableton Live via MCP. Use live:// resources for status, "
-        "session, selection, and device state, then use tools to drive transport, "
-        "views, tracks, devices, clips, and mixer behavior. LiveMCP is primarily a "
-        "controller bridge for Ableton, not a composition agent."
+        "session, selection, and device state, use max:// resources for Max for Live "
+        "bridge state, then use tools to drive transport, views, tracks, devices, "
+        "clips, mixer behavior, and native Max patcher inspection when a local Max "
+        "bridge session is attached. LiveMCP is primarily a controller bridge for "
+        "Ableton, not a composition agent."
     ),
 )
 
@@ -48,6 +51,7 @@ _all_tools = _collect_tools(
     arrangement.TOOLS,
     grooves.TOOLS,
     docs.TOOLS,
+    max_tools.TOOLS,
 )
 
 for _fn in _all_tools:
@@ -62,6 +66,16 @@ def _build_parser() -> argparse.ArgumentParser:
     actions.add_argument("--install", action="store_true", help="Install the LiveMCP remote script")
     actions.add_argument("--uninstall", action="store_true", help="Uninstall the LiveMCP remote script")
     actions.add_argument("--install-status", action="store_true", help="Show remote-script install status")
+    actions.add_argument(
+        "--install-max-bridge",
+        action="store_true",
+        help="Install the LiveMCP Max bridge probe device and sidecar assets into the User Library",
+    )
+    actions.add_argument(
+        "--max-bridge-status",
+        action="store_true",
+        help="Show the LiveMCP Max bridge probe install status",
+    )
     actions.add_argument("--restart-ableton", action="store_true", help="Restart Ableton and wait for LiveMCP")
     actions.add_argument("--launch-ableton", action="store_true", help="Launch Ableton")
     actions.add_argument("--quit-ableton", action="store_true", help="Quit Ableton")
@@ -110,6 +124,16 @@ def main(argv: list[str] | None = None):
         from .installer import install
 
         install(use_symlink=args.symlink_install)
+    elif args.install_max_bridge:
+        import json
+        from .installer import install_max_bridge
+
+        print(json.dumps(install_max_bridge(), indent=2))
+    elif args.max_bridge_status:
+        import json
+        from .installer import get_max_bridge_status
+
+        print(json.dumps(get_max_bridge_status(), indent=2))
     elif args.install_status:
         import json
         from .installer import get_install_status

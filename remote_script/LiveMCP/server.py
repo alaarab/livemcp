@@ -6,7 +6,9 @@ import threading
 import traceback
 from queue import Queue
 
+from .errors import LiveMCPError
 from .handlers import get_all_read_handlers, get_all_write_handlers
+from .max_bridge import MaxBridgeClient
 
 PORT = 9877
 RECV_SIZE = 8192
@@ -27,6 +29,7 @@ class LiveMCPServer:
         self._running = False
         self._read_handlers = get_all_read_handlers()
         self._write_handlers = get_all_write_handlers()
+        self._max_bridge = MaxBridgeClient()
 
     def log(self, msg):
         self._cs.log_message("LiveMCP: " + str(msg))
@@ -135,7 +138,7 @@ class LiveMCPServer:
                         self.log("Command error: {0}\n{1}".format(e, traceback.format_exc()))
                         self._send_json(
                             client,
-                            {"status": "error", "error": str(e)},
+                            {"status": "error", "error": self._error_payload(e)},
                             request_id=request_id,
                         )
         except Exception as e:
@@ -158,6 +161,13 @@ class LiveMCPServer:
             data["id"] = request_id
         payload = json.dumps(data).encode("utf-8") + MESSAGE_TERMINATOR
         client.sendall(payload)
+
+    @staticmethod
+    def _error_payload(error):
+        """Serialize remote errors while preserving structured payloads."""
+        if isinstance(error, LiveMCPError):
+            return error.to_payload()
+        return str(error)
 
     def _dispatch(self, command):
         """Route a command to the appropriate handler."""
@@ -186,7 +196,7 @@ class LiveMCPServer:
                 response_queue.put({"ok": True, "result": result})
             except Exception as e:
                 self.log("Handler error: {0}\n{1}".format(e, traceback.format_exc()))
-                response_queue.put({"ok": False, "error": str(e)})
+                response_queue.put({"ok": False, "error": e})
 
         try:
             self._cs.schedule_message(0, task)
@@ -197,4 +207,12 @@ class LiveMCPServer:
         response = response_queue.get(timeout=RESPONSE_TIMEOUT)
         if response["ok"]:
             return response["result"]
-        raise RuntimeError(response["error"])
+        raise response["error"]
+
+    def get_max_bridge_info(self):
+        """Return local Max bridge capability metadata."""
+        return self._max_bridge.get_info()
+
+    def get_max_bridge_client(self):
+        """Return the internal Max bridge client."""
+        return self._max_bridge

@@ -23,6 +23,9 @@ class ResourceTests(unittest.TestCase):
         self.assertIn("live://session/current", resource_uris)
         self.assertIn("live://selection/track", resource_uris)
         self.assertIn("live://view/current", resource_uris)
+        self.assertIn("max://status", resource_uris)
+        self.assertIn("max://selected-device", resource_uris)
+        self.assertIn("max://patcher/current", resource_uris)
         self.assertIn("live://track/{track_index}", template_uris)
         self.assertIn("live://scene/{scene_index}", template_uris)
         self.assertIn("live://device/{track_index}/{device_index}", template_uris)
@@ -34,7 +37,7 @@ class ResourceTests(unittest.TestCase):
     def test_reads_fixed_status_resource(self, get_livemcp_status):
         get_livemcp_status.return_value = {
             "package_version": "1.2.5",
-            "client_protocol_version": 2,
+            "client_protocol_version": 3,
             "remote_reachable": True,
             "warnings": [],
         }
@@ -42,7 +45,7 @@ class ResourceTests(unittest.TestCase):
         contents = anyio.run(server.mcp.read_resource, "live://status")
         payload = json.loads(contents[0].content)
 
-        self.assertEqual(payload["client_protocol_version"], 2)
+        self.assertEqual(payload["client_protocol_version"], 3)
         self.assertTrue(payload["remote_reachable"])
 
     @mock.patch("livemcp.resources._read_track_info")
@@ -86,6 +89,53 @@ class ResourceTests(unittest.TestCase):
 
         read_docs_chunk.assert_called_once_with(7)
         self.assertEqual(payload["chunk_id"], 7)
+
+    @mock.patch("livemcp.resources.session.get_livemcp_status")
+    def test_reads_max_status_resource(self, get_livemcp_status):
+        get_livemcp_status.return_value = {
+            "remote_reachable": True,
+            "remote_error": None,
+            "max_bridge": {"reachable": False, "port": 9881},
+            "warnings": [
+                "Max bridge is not currently reachable; Max for Live patcher tools will fail until a local bridge session is available.",
+                "Installed LiveMCP remote script is out of sync with the current source; run --install.",
+            ],
+        }
+
+        contents = anyio.run(server.mcp.read_resource, "max://status")
+        payload = json.loads(contents[0].content)
+
+        self.assertEqual(payload["max_bridge"]["port"], 9881)
+        self.assertEqual(len(payload["warnings"]), 1)
+        self.assertIn("Max bridge", payload["warnings"][0])
+
+    @mock.patch("livemcp.resources.max_tools.get_selected_max_device")
+    def test_reads_selected_max_device_resource(self, get_selected_max_device):
+        get_selected_max_device.return_value = {
+            "supported": True,
+            "bridge_session_id": "session-1",
+            "selected_device": {"device_name": "Bridge"},
+        }
+
+        contents = anyio.run(server.mcp.read_resource, "max://selected-device")
+        payload = json.loads(contents[0].content)
+
+        self.assertEqual(payload["bridge_session_id"], "session-1")
+        self.assertEqual(payload["selected_device"]["device_name"], "Bridge")
+
+    @mock.patch("livemcp.resources.max_tools.get_current_patcher")
+    def test_reads_current_max_patcher_resource(self, get_current_patcher):
+        get_current_patcher.return_value = {
+            "bridge_session_id": "session-1",
+            "name": "bridge.maxpat",
+            "box_count": 2,
+        }
+
+        contents = anyio.run(server.mcp.read_resource, "max://patcher/current")
+        payload = json.loads(contents[0].content)
+
+        self.assertEqual(payload["name"], "bridge.maxpat")
+        self.assertEqual(payload["box_count"], 2)
 
 
 if __name__ == "__main__":

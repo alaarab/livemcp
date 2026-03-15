@@ -8,6 +8,17 @@ import shutil
 import sys
 from pathlib import Path
 
+from .max_bridge_device import (
+    BRIDGE_DEVICE_FILENAME,
+    BRIDGE_RUNTIME_FILENAME,
+    BRIDGE_SCHEMA_FILENAME,
+    BRIDGE_SERVER_FILENAME,
+    get_max_bridge_asset_dir,
+    get_probe_device_dir,
+    get_probe_device_path,
+    write_probe_device,
+)
+
 EDITION_PRIORITY = {
     "Suite": 5,
     "Standard": 4,
@@ -245,6 +256,37 @@ def install(use_symlink: bool | None = None):
     print()
     print("Done! Now restart Ableton and select LiveMCP as a Control Surface.")
     print("  Preferences > Link, Tempo & MIDI > Control Surface > LiveMCP")
+
+
+def get_max_bridge_status(root: Path | None = None) -> dict:
+    """Return install status for the packaged Max bridge probe assets."""
+    asset_dir = get_max_bridge_asset_dir()
+    probe_dir = get_probe_device_dir(root=root)
+    probe_path = get_probe_device_path(root=root)
+    assets = {
+        BRIDGE_RUNTIME_FILENAME: str((probe_dir / BRIDGE_RUNTIME_FILENAME)),
+        BRIDGE_SERVER_FILENAME: str((probe_dir / BRIDGE_SERVER_FILENAME)),
+        BRIDGE_SCHEMA_FILENAME: str((probe_dir / BRIDGE_SCHEMA_FILENAME)),
+    }
+    return {
+        "asset_source_path": str(asset_dir),
+        "asset_source_found": asset_dir.is_dir(),
+        "probe_device_path": str(probe_path),
+        "probe_device_installed": probe_path.exists(),
+        "probe_asset_paths": assets,
+        "probe_assets_installed": all(Path(path).exists() for path in assets.values()),
+    }
+
+
+def install_max_bridge(root: Path | None = None) -> dict:
+    """Install the bridge probe device and sidecar assets into the User Library."""
+    result = write_probe_device(root=root)
+    print(f"Installed {BRIDGE_DEVICE_FILENAME} to: {result['device_path']}")
+    for asset_path in result["asset_paths"]:
+        print(f"Installed bridge asset: {asset_path}")
+    print()
+    print("Load the LiveMCP Bridge Probe device in Ableton, select it, then use the max:// tools.")
+    return result
 
 
 def uninstall():

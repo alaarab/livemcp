@@ -1,6 +1,11 @@
 import json
+import sys
 import unittest
+from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from remote_script.LiveMCP.errors import LiveMCPError
 from remote_script.LiveMCP.server import LiveMCPServer
 
 
@@ -88,6 +93,39 @@ class ServerProtocolTests(unittest.TestCase):
         self.assertEqual(
             responses,
             [{"id": 9, "status": "error", "error": "Unknown command: missing"}],
+        )
+
+    def test_handle_client_preserves_structured_write_errors(self):
+        server = LiveMCPServer(FakeControlSurface())
+        server._running = True
+        server._read_handlers = {}
+
+        def explode(_cs, _params):
+            raise LiveMCPError(
+                "max/not-max-device",
+                "Selected device is not a Max for Live device.",
+                {"device_name": "EQ Eight"},
+            )
+
+        server._write_handlers = {"explode": explode}
+        client = FakeClient([b'{"id":4,"type":"explode","params":{}}\n', b""])
+
+        server._handle_client(client)
+
+        responses = [json.loads(item.decode("utf-8")) for item in client.sent]
+        self.assertEqual(
+            responses,
+            [
+                {
+                    "id": 4,
+                    "status": "error",
+                    "error": {
+                        "code": "max/not-max-device",
+                        "message": "Selected device is not a Max for Live device.",
+                        "details": {"device_name": "EQ Eight"},
+                    },
+                }
+            ],
         )
 
     def test_stop_closes_client_sockets_and_joins_threads(self):

@@ -7,6 +7,7 @@ from .devices import READ_HANDLERS as DEVICES_READ, WRITE_HANDLERS as DEVICES_WR
 from .mixer import READ_HANDLERS as MIXER_READ, WRITE_HANDLERS as MIXER_WRITE
 from .arrangement import READ_HANDLERS as ARRANGEMENT_READ, WRITE_HANDLERS as ARRANGEMENT_WRITE
 from .grooves import READ_HANDLERS as GROOVES_READ, WRITE_HANDLERS as GROOVES_WRITE
+from .max import READ_HANDLERS as MAX_READ, WRITE_HANDLERS as MAX_WRITE
 
 
 def _merge_handler_dicts(*handler_sets):
@@ -29,6 +30,7 @@ def get_all_read_handlers():
         MIXER_READ,
         ARRANGEMENT_READ,
         GROOVES_READ,
+        MAX_READ,
     )
 
 
@@ -41,4 +43,5 @@ def get_all_write_handlers():
         MIXER_WRITE,
         ARRANGEMENT_WRITE,
         GROOVES_WRITE,
+        MAX_WRITE,
     )

@@ -126,10 +126,29 @@ def get_session_info(control_surface, params):
 
 def get_livemcp_info(control_surface, params):
     """Return transport capability information for the installed remote script."""
+    server = getattr(control_surface, "_server", None)
+    max_bridge = (
+        server.get_max_bridge_info()
+        if server is not None
+        else {
+            "reachable": False,
+            "capabilities": {
+                "selected_device": False,
+                "patcher_read": False,
+                "patcher_write": False,
+                "window_control": False,
+                "save": False,
+            },
+            "error_code": "max/bridge-unavailable",
+            "error_message": "LiveMCP Max bridge is not initialized.",
+        }
+    )
     return {
         "protocol_version": TRANSPORT_PROTOCOL_VERSION,
         "supports_request_ids": True,
         "transport": "tcp-json-lines",
+        "namespaces": ["live", "docs", "max"],
+        "max_bridge": max_bridge,
     }
 
 

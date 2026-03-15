@@ -58,6 +58,8 @@ class LiveMCPInfo(TypedDict, total=False):
     supports_request_ids: bool
     transport: str
     legacy_compatibility_mode: bool
+    namespaces: list[str]
+    max_bridge: dict[str, Any]
 
 
 class InstallStatusInfo(TypedDict, total=False):
@@ -76,6 +78,7 @@ class LiveMCPStatus(TypedDict, total=False):
     install_status: InstallStatusInfo
     remote_reachable: bool
     remote_info: Optional[LiveMCPInfo]
+    max_bridge: Optional[dict[str, Any]]
     cached_server_info: Optional[LiveMCPInfo]
     remote_error: Optional[str]
     warnings: list[str]
@@ -196,6 +199,24 @@ def _legacy_remote_info() -> LiveMCPInfo:
         "supports_request_ids": False,
         "transport": "tcp-json-lines",
         "legacy_compatibility_mode": True,
+        "namespaces": ["live"],
+        "max_bridge": _default_max_bridge_info(),
+    }
+
+
+def _default_max_bridge_info() -> dict[str, Any]:
+    return {
+        "reachable": False,
+        "transport": "tcp-json-lines",
+        "host": "127.0.0.1",
+        "port": 9881,
+        "capabilities": {
+            "selected_device": False,
+            "patcher_read": False,
+            "patcher_write": False,
+            "window_control": False,
+            "save": False,
+        },
     }
 
 
@@ -531,6 +552,7 @@ def get_livemcp_status() -> LiveMCPStatus:
         "install_status": get_install_status(),
         "remote_reachable": False,
         "remote_info": None,
+        "max_bridge": None,
         "cached_server_info": get_connection().get_server_info(),
         "remote_error": None,
         "warnings": [],
@@ -558,12 +580,26 @@ def get_livemcp_status() -> LiveMCPStatus:
         )
 
     remote_info = status["remote_info"]
+    status["max_bridge"] = (
+        remote_info.get("max_bridge", _default_max_bridge_info()) if remote_info else None
+    )
     if not status["remote_reachable"]:
         status["warnings"].append("LiveMCP socket is not currently reachable.")
     elif remote_info and remote_info.get("protocol_version", 0) < TRANSPORT_PROTOCOL_VERSION:
         status["warnings"].append(
             "Ableton is running an older LiveMCP transport protocol; reinstall and restart Ableton."
         )
+
+    if status["remote_reachable"] and remote_info:
+        namespaces = remote_info.get("namespaces", [])
+        if "max" not in namespaces:
+            status["warnings"].append(
+                "The running LiveMCP remote script does not advertise Max for Live support."
+            )
+        elif status["max_bridge"] and not status["max_bridge"].get("reachable"):
+            status["warnings"].append(
+                "Max bridge is not currently reachable; Max for Live patcher tools will fail until a local bridge session is available."
+            )
 
     return status
 
