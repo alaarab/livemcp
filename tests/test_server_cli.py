@@ -28,6 +28,22 @@ class ServerCliTests(unittest.TestCase):
         get_install_status.assert_called_once_with()
         self.assertIn('"installed": true', stdout.getvalue().lower())
 
+    @mock.patch("livemcp.installer.install_max_bridge", return_value={"device_path": "/tmp/Bridge.amxd"})
+    def test_main_installs_max_bridge(self, install_max_bridge):
+        with mock.patch("sys.stdout", new=io.StringIO()) as stdout:
+            server.main(["--install-max-bridge"])
+
+        install_max_bridge.assert_called_once_with()
+        self.assertIn("/tmp/Bridge.amxd", stdout.getvalue())
+
+    @mock.patch("livemcp.installer.get_max_bridge_status", return_value={"probe_device_installed": True})
+    def test_main_prints_max_bridge_status(self, get_max_bridge_status):
+        with mock.patch("sys.stdout", new=io.StringIO()) as stdout:
+            server.main(["--max-bridge-status"])
+
+        get_max_bridge_status.assert_called_once_with()
+        self.assertIn('"probe_device_installed": true', stdout.getvalue().lower())
+
     @mock.patch("livemcp.ableton.quit_ableton")
     def test_main_passes_no_force_to_quit_helper(self, quit_ableton):
         with mock.patch("sys.stdout", new=io.StringIO()):

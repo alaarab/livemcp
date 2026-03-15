@@ -9,6 +9,7 @@ from mcp.server.fastmcp import FastMCP
 from .docs import DocsIndex
 from .connection import get_connection
 from .tools import session
+from .tools import max as max_tools
 
 
 def _read_track_info(track_index: int) -> dict[str, Any]:
@@ -40,6 +41,20 @@ def _read_docs_chunk(chunk_id: int) -> dict[str, Any]:
 
 def _read_docs_page(page_id: int) -> dict[str, Any]:
     return DocsIndex().get_page(page_id)
+
+
+def _read_max_status() -> dict[str, Any]:
+    status = session.get_livemcp_status()
+    return {
+        "remote_reachable": status.get("remote_reachable", False),
+        "remote_error": status.get("remote_error"),
+        "max_bridge": status.get("max_bridge"),
+        "warnings": [
+            warning
+            for warning in status.get("warnings", [])
+            if "max" in warning.lower()
+        ],
+    }
 
 
 def register_resources(mcp: FastMCP) -> None:
@@ -124,6 +139,36 @@ def register_resources(mcp: FastMCP) -> None:
     )
     def application_dialog() -> session.ApplicationDialogInfo:
         return session.get_application_dialog()
+
+    @mcp.resource(
+        "max://status",
+        name="max_status_resource",
+        title="Max Bridge Status",
+        description="Local Max bridge reachability, capability state, and Max-specific warnings.",
+        mime_type="application/json",
+    )
+    def max_status() -> dict[str, Any]:
+        return _read_max_status()
+
+    @mcp.resource(
+        "max://selected-device",
+        name="max_selected_device_resource",
+        title="Selected Max Device",
+        description="Currently selected Live device with Max for Live support and bridge attachment metadata.",
+        mime_type="application/json",
+    )
+    def max_selected_device() -> max_tools.SelectedMaxDeviceInfo:
+        return max_tools.get_selected_max_device()
+
+    @mcp.resource(
+        "max://patcher/current",
+        name="max_current_patcher_resource",
+        title="Current Max Patcher",
+        description="Summary of the currently attached Max patcher session.",
+        mime_type="application/json",
+    )
+    def max_current_patcher() -> max_tools.CurrentPatcherInfo:
+        return max_tools.get_current_patcher()
 
     @mcp.resource(
         "live://track/{track_index}",

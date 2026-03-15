@@ -9,7 +9,7 @@ It gives an MCP client two useful layers:
 
 The point is control and inspection. LiveMCP is built for tasks like selecting tracks, focusing views, firing clips, changing device parameters, checking transport state, handling startup dialogs, and keeping the remote script in sync with the package. It is not trying to be an AI songwriter.
 
-[![Tools](https://img.shields.io/badge/Tools-205-blueviolet)](https://github.com/alaarab/livemcp) [![Python](https://img.shields.io/badge/Python-3.10+-3776AB)](https://python.org) [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+[![Tools](https://img.shields.io/badge/Tools-218-blueviolet)](https://github.com/alaarab/livemcp) [![Python](https://img.shields.io/badge/Python-3.10+-3776AB)](https://python.org) [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
 ## What It Is
 
@@ -25,8 +25,8 @@ The point is control and inspection. LiveMCP is built for tasks like selecting t
 
 ## At A Glance
 
-- `205` tools across session, clips, tracks, devices, mixer, arrangement, grooves, and docs
-- controller-oriented MCP resources like `live://status`, `live://view/current`, and `live://track/{track_index}`
+- `218` tools across session, clips, tracks, devices, mixer, arrangement, grooves, docs, and Max patcher control
+- controller-oriented MCP resources like `live://status`, `live://view/current`, `live://track/{track_index}`, and `max://selected-device`
 - local docs sync and offline search across official Ableton and Cycling '74 documentation
 - packaged install-status and Ableton restart helpers
 - install support for macOS, Windows, and WSL
@@ -88,6 +88,7 @@ Once the server is running, the most useful starting points are:
 - read `live://status`
 - read `live://session/current`
 - read `live://view/current`
+- read `max://status` before using Max for Live patcher tools
 - read `docs://status`
 - call `get_session_info`
 - call `show_view("Session")` or `focus_view("Browser")`
@@ -176,13 +177,14 @@ Config file locations:
 
 ## Capability Map
 
-You do not need to memorize 205 commands to use LiveMCP well. The useful mental model is:
+You do not need to memorize 218 commands to use LiveMCP well. The useful mental model is:
 
 - session tools for transport, selection, views, dialogs, and global state
 - track and mixer tools for routing, arm/solo/mute, levels, and return paths
 - device tools for loading instruments/effects and changing parameters
 - clip and arrangement tools for manipulating content that already exists in the set
 - docs tools for searching local snapshots of official Ableton and Max documentation
+- max tools for inspecting and editing supported Max for Live patchers through a local bridge
 - resources when you want a stable read surface for the current state
 
 The tables below are the full reference.
@@ -197,7 +199,8 @@ The tables below are the full reference.
 | Arrangement | 9 |
 | Grooves | 5 |
 | Docs | 4 |
-| **Total** | **205** |
+| Max | 13 |
+| **Total** | **218** |
 
 ## MCP Resources
 
@@ -215,6 +218,9 @@ These are meant for controller-style reads where a client wants stable Ableton s
 | `live://selection/scene` | Currently selected scene |
 | `live://selection/device` | Currently selected device |
 | `live://application/dialog` | Current Ableton dialog state |
+| `max://status` | Local Max bridge reachability and Max-specific warnings |
+| `max://selected-device` | Selected Live device with Max for Live bridge metadata |
+| `max://patcher/current` | Current attached Max patcher session summary |
 | `docs://status` | Local docs index status and synced source coverage |
 
 ### Resource Templates
@@ -409,6 +415,29 @@ These are meant for controller-style reads where a client wants stable Ableton s
 
 </details>
 
+<details>
+<summary>Max Tools (13)</summary>
+
+| Tool | Description |
+|------|-------------|
+| `get_selected_max_device` | Describe the selected device and Max bridge attachment state |
+| `open_selected_device_in_max` | Open the selected Max device in the native Max editor |
+| `get_current_patcher` | Summary of the current attached patcher session |
+| `list_patcher_boxes` | List all patcher boxes in the current session |
+| `get_box_attrs` / `set_box_attrs` | Inspect or change allowlisted object and box attributes |
+| `create_box` / `delete_box` | Create or remove a patcher box |
+| `create_patchline` / `delete_patchline` | Connect or disconnect patcher boxes |
+| `set_presentation_rect` | Update a box's presentation rect |
+| `toggle_presentation_mode` | Toggle or force presentation mode |
+| `save_max_device` | Save the attached Max device in place |
+
+</details>
+
+V1 Max bridge note: the currently selected Max device must be bridge-enabled and
+host the local bridge runtime itself. The packaged `LiveMCP Bridge Probe.amxd`
+does this today. Non-bridge-enabled third-party M4L devices remain explicit
+unsupported cases rather than falling back to GUI scripting.
+
 ## How It Works
 
 ```
@@ -421,7 +450,7 @@ These are meant for controller-style reads where a client wants stable Ableton s
 │                Package-Side MCP Server                   │
 │            src/livemcp/ (FastMCP)                        │
 │                                                          │
-│   205 tools + live:// and docs:// resources              │
+│   218 tools + live://, max://, and docs:// resources     │
 │   structured controller state + action calls             │
 └────────────────────────┬────────────────────────────────┘
                          │ TCP Socket (localhost:9877)
@@ -429,11 +458,17 @@ These are meant for controller-style reads where a client wants stable Ableton s
 │              Ableton Remote Script                       │
 │         remote_script/LiveMCP/ (Python 3.11)             │
 │                                                          │
-│   READ handlers on the socket thread                     │
-│   WRITE handlers on Ableton's main thread                │
+│   Live/browser commands: read + main-thread write split  │
+│   Max bridge commands: socket-thread proxying            │
 │   browser loading + Live API access                      │
 └────────────────────────┬────────────────────────────────┘
-                         │ Live Object Model
+                         │ TCP Socket (localhost:9881) for Max bridge
+┌────────────────────────▼────────────────────────────────┐
+│         Selected-Device Max Bridge Runtime               │
+│   node.script TCP server + js patcher runtime inside     │
+│        the bridge-enabled Max for Live device            │
+└────────────────────────┬────────────────────────────────┘
+                         │ Live Object Model + Max patcher API
 ┌────────────────────────▼────────────────────────────────┐
 │                  Ableton Live 12                         │
 └─────────────────────────────────────────────────────────┘
@@ -442,8 +477,13 @@ These are meant for controller-style reads where a client wants stable Ableton s
 Three design choices matter most:
 
 - **Thread safety** — reads happen on the socket thread; writes are scheduled onto Ableton's main thread so Live does not get mutated from the wrong place.
+- **Max bridge dispatch** — Max bridge commands stay on the socket thread because the actual patcher mutations happen inside the Max runtime; bouncing those calls through Ableton's main thread deadlocks editor/mutation requests.
 - **Single-source registration** — tool modules and handler registries fail fast on duplicate names instead of silently shadowing commands.
 - **Controller-first state model** — tools handle actions, and resources expose the current state a client usually wants to inspect before acting.
+
+## Design Notes
+
+- Native Max for Live support proposal: [docs/native-max-for-live-support.md](docs/native-max-for-live-support.md)
 
 ## Developing LiveMCP
 

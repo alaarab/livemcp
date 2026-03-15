@@ -5,6 +5,7 @@ import socket
 import time
 import threading
 
+from .errors import error_from_payload
 from .protocol import TRANSPORT_PROTOCOL_VERSION
 
 HOST = "127.0.0.1"
@@ -82,8 +83,7 @@ class AbletonConnection:
         payload = self._build_payload("get_session_info", {}, request_id)
         response = self._send_payload_unlocked(payload, expected_request_id=request_id)
         if response.get("status") == "error":
-            error_msg = response.get("error") or response.get("message", "Unknown error")
-            raise RuntimeError(error_msg)
+            raise error_from_payload(response.get("error") or response.get("message"))
         self._refresh_server_info()
 
     def _refresh_server_info(self) -> dict:
@@ -92,8 +92,8 @@ class AbletonConnection:
         payload = self._build_payload("get_livemcp_info", {}, request_id)
         response = self._send_payload_unlocked(payload, expected_request_id=request_id)
         if response.get("status") == "error":
-            error_msg = response.get("error") or response.get("message", "Unknown error")
-            if "Unknown command: get_livemcp_info" in error_msg:
+            error = error_from_payload(response.get("error") or response.get("message"))
+            if "Unknown command: get_livemcp_info" in str(error):
                 self._server_info = {
                     "protocol_version": 1,
                     "supports_request_ids": False,
@@ -101,7 +101,7 @@ class AbletonConnection:
                     "legacy_compatibility_mode": True,
                 }
                 return self._server_info
-            raise RuntimeError(error_msg)
+            raise error
 
         result = response.get("result", {})
         result.setdefault("protocol_version", TRANSPORT_PROTOCOL_VERSION)
@@ -140,8 +140,7 @@ class AbletonConnection:
 
                     response = self._send_payload_unlocked(payload, expected_request_id=request_id)
                     if response.get("status") == "error":
-                        error_msg = response.get("error") or response.get("message", "Unknown error")
-                        raise RuntimeError(error_msg)
+                        raise error_from_payload(response.get("error") or response.get("message"))
 
                     return response.get("result", {})
 
@@ -202,6 +201,5 @@ def probe_command(command_type: str, params: dict, timeout: float = 2.0) -> dict
             "Mismatched response id: expected {0}, got {1}".format(request_id, response_id)
         )
     if response.get("status") == "error":
-        error_msg = response.get("error") or response.get("message", "Unknown error")
-        raise RuntimeError(error_msg)
+        raise error_from_payload(response.get("error") or response.get("message"))
     return response.get("result", {})

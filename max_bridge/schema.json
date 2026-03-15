@@ -1,0 +1,32 @@
+{
+  "transport": {
+    "protocol": "tcp-json-lines",
+    "host": "127.0.0.1",
+    "port": 9881,
+    "local_only": true
+  },
+  "session_mode": "selected-device-server",
+  "capabilities": {
+    "selected_device": true,
+    "patcher_read": true,
+    "patcher_write": true,
+    "window_control": true,
+    "save": true
+  },
+  "commands": [
+    "get_max_bridge_info",
+    "find_device_session",
+    "show_editor",
+    "get_current_patcher",
+    "list_boxes",
+    "get_box_attrs",
+    "set_box_attrs",
+    "create_box",
+    "connect_boxes",
+    "disconnect_boxes",
+    "delete_box",
+    "set_presentation_rect",
+    "set_presentation_mode",
+    "save_device"
+  ]
+}

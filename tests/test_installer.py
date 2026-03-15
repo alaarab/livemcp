@@ -141,6 +141,30 @@ class InstallerTests(unittest.TestCase):
             self.assertTrue((target / "LiveMCP" / "__init__.py").exists())
             self.assertFalse((target / "LiveMCP" / "__pycache__").exists())
 
+    def test_install_max_bridge_writes_probe_device_and_assets(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+
+            result = installer.install_max_bridge(root=root)
+
+            self.assertTrue(Path(result["device_path"]).exists())
+            self.assertTrue(result["device_path"].endswith(".amxd"))
+            for asset_path in result["asset_paths"]:
+                self.assertTrue(Path(asset_path).exists())
+
+    def test_get_max_bridge_status_reports_probe_install(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+
+            before = installer.get_max_bridge_status(root=root)
+            self.assertFalse(before["probe_device_installed"])
+
+            installer.install_max_bridge(root=root)
+            after = installer.get_max_bridge_status(root=root)
+
+            self.assertTrue(after["probe_device_installed"])
+            self.assertTrue(after["probe_assets_installed"])
+
 
 if __name__ == "__main__":
     unittest.main()

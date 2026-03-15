@@ -39,21 +39,26 @@ class SessionToolTests(unittest.TestCase):
             "install_mode": "copy",
         }
         probe_command.return_value = {
-            "protocol_version": 2,
+            "protocol_version": 3,
             "supports_request_ids": True,
             "transport": "tcp-json-lines",
+            "namespaces": ["live", "docs", "max"],
+            "max_bridge": {"reachable": True, "capabilities": {"patcher_read": True}},
         }
         get_connection.return_value.get_server_info.return_value = {
-            "protocol_version": 2,
+            "protocol_version": 3,
             "supports_request_ids": True,
             "transport": "tcp-json-lines",
+            "namespaces": ["live", "docs", "max"],
+            "max_bridge": {"reachable": True, "capabilities": {"patcher_read": True}},
             "legacy_compatibility_mode": False,
         }
 
         result = session.get_livemcp_status()
 
         self.assertTrue(result["remote_reachable"])
-        self.assertEqual(result["remote_info"]["protocol_version"], 2)
+        self.assertEqual(result["remote_info"]["protocol_version"], 3)
+        self.assertEqual(result["max_bridge"]["reachable"], True)
         self.assertEqual(result["warnings"], [])
 
     @mock.patch("livemcp.tools.session.get_connection")
@@ -83,6 +88,50 @@ class SessionToolTests(unittest.TestCase):
             result["warnings"],
         )
         self.assertNotIn("LiveMCP socket is not currently reachable.", result["warnings"])
+
+    @mock.patch("livemcp.tools.session.get_connection")
+    @mock.patch("livemcp.tools.session.probe_command")
+    @mock.patch("livemcp.tools.session.get_install_status")
+    def test_get_livemcp_status_warns_when_max_bridge_unreachable(
+        self,
+        get_install_status,
+        probe_command,
+        get_connection,
+    ):
+        get_install_status.return_value = {
+            "installed": True,
+            "needs_install": False,
+            "install_mode": "copy",
+        }
+        probe_command.return_value = {
+            "protocol_version": 3,
+            "supports_request_ids": True,
+            "transport": "tcp-json-lines",
+            "namespaces": ["live", "docs", "max"],
+            "max_bridge": {
+                "reachable": False,
+                "capabilities": {"patcher_read": False},
+            },
+        }
+        get_connection.return_value.get_server_info.return_value = {
+            "protocol_version": 3,
+            "supports_request_ids": True,
+            "transport": "tcp-json-lines",
+            "namespaces": ["live", "docs", "max"],
+            "max_bridge": {
+                "reachable": False,
+                "capabilities": {"patcher_read": False},
+            },
+            "legacy_compatibility_mode": False,
+        }
+
+        result = session.get_livemcp_status()
+
+        self.assertEqual(result["max_bridge"]["reachable"], False)
+        self.assertIn(
+            "Max bridge is not currently reachable; Max for Live patcher tools will fail until a local bridge session is available.",
+            result["warnings"],
+        )
 
     def test_controller_tools_publish_output_schema(self):
         structured_tools = [

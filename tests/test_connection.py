@@ -8,6 +8,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from livemcp.connection import AbletonConnection, MESSAGE_TERMINATOR
+from livemcp.errors import RemoteCommandError
 
 
 class BlockingFakeSocket:
@@ -126,9 +127,11 @@ class AbletonConnectionTests(unittest.TestCase):
                     "id": request["id"],
                     "status": "success",
                     "result": {
-                        "protocol_version": 2,
+                        "protocol_version": 3,
                         "supports_request_ids": True,
                         "transport": "tcp-json-lines",
+                        "namespaces": ["live", "docs", "max"],
+                        "max_bridge": {"reachable": False},
                     },
                 }
                 if request["type"] == "get_livemcp_info"
@@ -188,9 +191,11 @@ class AbletonConnectionTests(unittest.TestCase):
                     "id": request["id"],
                     "status": "success",
                     "result": {
-                        "protocol_version": 2,
+                        "protocol_version": 3,
                         "supports_request_ids": True,
                         "transport": "tcp-json-lines",
+                        "namespaces": ["live", "docs", "max"],
+                        "max_bridge": {"reachable": True},
                     },
                 }
             )
@@ -201,9 +206,11 @@ class AbletonConnectionTests(unittest.TestCase):
         self.assertEqual(
             connection.get_server_info(),
             {
-                "protocol_version": 2,
+                "protocol_version": 3,
                 "supports_request_ids": True,
                 "transport": "tcp-json-lines",
+                "namespaces": ["live", "docs", "max"],
+                "max_bridge": {"reachable": True},
                 "legacy_compatibility_mode": False,
             },
         )
@@ -235,6 +242,29 @@ class AbletonConnectionTests(unittest.TestCase):
                 "transport": "tcp-json-lines",
                 "legacy_compatibility_mode": True,
             },
+        )
+
+    def test_send_command_raises_structured_remote_error(self):
+        connection = AbletonConnection()
+        connection._socket = ScriptedFakeSocket(
+            lambda request, _send_count: {
+                "id": request["id"],
+                "status": "error",
+                "error": {
+                    "code": "max/not-max-device",
+                    "message": "Selected device is not a Max for Live device.",
+                    "details": {"device_name": "EQ Eight"},
+                },
+            }
+        )
+
+        with self.assertRaises(RemoteCommandError) as raised:
+            connection.send_command("get_current_patcher", {})
+
+        self.assertEqual(raised.exception.code, "max/not-max-device")
+        self.assertEqual(
+            raised.exception.details,
+            {"device_name": "EQ Eight"},
         )
 
 
