@@ -76,6 +76,25 @@ class MaxToolTests(unittest.TestCase):
         )
         self.assertEqual(result["box_id"], "obj-3")
 
+    @mock.patch("livemcp.tools.max.get_connection")
+    def test_list_patcher_boxes_can_request_named_only_mode(self, get_connection):
+        get_connection.return_value.send_command.return_value = {
+            "bridge_session_id": "session-1",
+            "boxes": [{"box_id": "state_js", "varname": "state_js"}],
+            "total_box_count": 12,
+            "complete": False,
+            "enumeration_mode": "named_only",
+        }
+
+        result = max_tools.list_patcher_boxes(bridge_session_id="session-1", named_only=True)
+
+        get_connection.return_value.send_command.assert_called_once_with(
+            "list_patcher_boxes",
+            {"bridge_session_id": "session-1", "named_only": True},
+        )
+        self.assertFalse(result["complete"])
+        self.assertEqual(result["enumeration_mode"], "named_only")
+
     def test_max_tools_publish_output_schema(self):
         structured_tools = [
             "get_selected_max_device",

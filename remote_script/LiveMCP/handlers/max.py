@@ -3,6 +3,8 @@
 from ..errors import LiveMCPError
 from .session import _describe_device, _describe_track_location, _get_selected_device_on_track
 
+FULL_BOX_LIST_THRESHOLD = 128
+
 
 def _max_bridge_info(control_surface):
     server = getattr(control_surface, "_server", None)
@@ -185,18 +187,78 @@ def get_current_patcher(control_surface, params):
     return result
 
 
+def _patcher_bridge_request(context, session_info):
+    return {
+        "bridge_session_id": session_info.get("bridge_session_id"),
+        "device_fingerprint": context["selected_device"],
+    }
+
+
+def _finalize_box_listing(
+    result,
+    session_info,
+    *,
+    total_box_count=None,
+    complete=True,
+    enumeration_mode="full",
+    fallback_reason=None,
+):
+    result.setdefault("bridge_session_id", session_info.get("bridge_session_id"))
+    if total_box_count is None:
+        total_box_count = len(result.get("boxes", []))
+    result.setdefault("total_box_count", total_box_count)
+    result.setdefault("complete", complete)
+    result.setdefault("enumeration_mode", enumeration_mode)
+    if fallback_reason is not None:
+        result.setdefault("fallback_reason", fallback_reason)
+    return result
+
+
 def list_patcher_boxes(control_surface, params):
     """List all boxes in the attached patcher."""
     context, bridge_client, session_info = _resolve_bridge_session(control_surface, params)
-    result = bridge_client.send_command(
-        "list_boxes",
-        {
-            "bridge_session_id": session_info.get("bridge_session_id"),
-            "device_fingerprint": context["selected_device"],
-        },
-    )
-    result.setdefault("bridge_session_id", session_info.get("bridge_session_id"))
-    return result
+    request = _patcher_bridge_request(context, session_info)
+    named_only = bool(params.get("named_only"))
+    patcher_info = bridge_client.send_command("get_current_patcher", request)
+    if named_only:
+        result = bridge_client.send_command("list_named_boxes", request)
+        return _finalize_box_listing(
+            result,
+            session_info,
+            total_box_count=patcher_info.get("box_count"),
+            complete=False,
+            enumeration_mode="named_only",
+        )
+    if (patcher_info.get("box_count") or 0) > FULL_BOX_LIST_THRESHOLD:
+        result = bridge_client.send_command("list_named_boxes", request)
+        return _finalize_box_listing(
+            result,
+            session_info,
+            total_box_count=patcher_info.get("box_count"),
+            complete=False,
+            enumeration_mode="named_only",
+            fallback_reason="max/box-count-threshold",
+        )
+
+    try:
+        result = bridge_client.send_command("list_boxes", request)
+        return _finalize_box_listing(
+            result,
+            session_info,
+            total_box_count=patcher_info.get("box_count"),
+        )
+    except LiveMCPError as exc:
+        if exc.code != "max/bridge-timeout":
+            raise
+        result = bridge_client.send_command("list_named_boxes", request)
+        return _finalize_box_listing(
+            result,
+            session_info,
+            total_box_count=patcher_info.get("box_count"),
+            complete=False,
+            enumeration_mode="named_only",
+            fallback_reason=exc.code,
+        )
 
 
 def get_box_attrs(control_surface, params):

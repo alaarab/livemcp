@@ -17,6 +17,7 @@ const BRIDGE_COMMANDS = {
   show_editor: true,
   get_current_patcher: true,
   list_boxes: true,
+  list_named_boxes: true,
   get_box_attrs: true,
   set_box_attrs: true,
   create_box: true,

@@ -71,6 +71,10 @@ class PatcherBoxInfo(TypedDict, total=False):
 class PatcherBoxesInfo(TypedDict, total=False):
     bridge_session_id: str
     boxes: list[PatcherBoxInfo]
+    total_box_count: int
+    complete: bool
+    enumeration_mode: str
+    fallback_reason: str
 
 
 class BoxAttrsInfo(TypedDict, total=False):
@@ -112,9 +116,20 @@ def get_current_patcher(bridge_session_id: Optional[str] = None) -> CurrentPatch
     return result
 
 
-def list_patcher_boxes(bridge_session_id: Optional[str] = None) -> PatcherBoxesInfo:
-    """List all boxes in the currently attached patcher."""
-    result = get_connection().send_command("list_patcher_boxes", _bridge_params(bridge_session_id))
+def list_patcher_boxes(
+    bridge_session_id: Optional[str] = None,
+    named_only: bool = False,
+) -> PatcherBoxesInfo:
+    """List boxes in the attached patcher.
+
+    When `named_only=True`, request only boxes with a stable Max `varname`.
+    The Ableton-side bridge may also automatically fall back to this smaller
+    response when full enumeration times out on larger patchers.
+    """
+    params = _bridge_params(bridge_session_id)
+    if named_only:
+        params["named_only"] = True
+    result = get_connection().send_command("list_patcher_boxes", params)
     return result
 
 
