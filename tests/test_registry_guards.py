@@ -5,6 +5,8 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from livemcp import server
+from livemcp.tools import max as max_tools
 from livemcp.server import _collect_tools
 from remote_script.LiveMCP.handlers import _merge_handler_dicts
 from remote_script.LiveMCP.handlers import max as max_handlers
@@ -28,24 +30,15 @@ class RegistryGuardTests(unittest.TestCase):
             _merge_handler_dicts({"duplicate": object()}, {"duplicate": object()})
 
     def test_max_bridge_commands_stay_off_main_thread_dispatch(self):
-        expected_read_only = {
-            "get_selected_max_device",
-            "open_selected_device_in_max",
-            "get_current_patcher",
-            "list_patcher_boxes",
-            "get_box_attrs",
-            "set_box_attrs",
-            "create_box",
-            "create_patchline",
-            "delete_box",
-            "delete_patchline",
-            "set_presentation_rect",
-            "toggle_presentation_mode",
-            "save_max_device",
-        }
+        expected_max_tools = {tool.__name__ for tool in max_tools.TOOLS}
 
-        self.assertTrue(expected_read_only.issubset(set(max_handlers.READ_HANDLERS)))
-        self.assertFalse(expected_read_only & set(max_handlers.WRITE_HANDLERS))
+        self.assertEqual(set(max_handlers.READ_HANDLERS), expected_max_tools)
+        self.assertEqual(max_handlers.WRITE_HANDLERS, {})
+
+    def test_all_max_tools_are_registered_on_mcp_server(self):
+        for tool in max_tools.TOOLS:
+            with self.subTest(tool=tool.__name__):
+                self.assertIsNotNone(server.mcp._tool_manager.get_tool(tool.__name__))
 
 
 if __name__ == "__main__":
