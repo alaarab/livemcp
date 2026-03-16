@@ -18,14 +18,16 @@ class ResourceTests(unittest.TestCase):
 
         resource_uris = {str(resource.uri) for resource in resources}
         template_uris = {template.uriTemplate for template in templates}
+        max_resource_uris = {uri for uri in resource_uris if uri.startswith("max://")}
 
         self.assertIn("live://status", resource_uris)
         self.assertIn("live://session/current", resource_uris)
         self.assertIn("live://selection/track", resource_uris)
         self.assertIn("live://view/current", resource_uris)
-        self.assertIn("max://status", resource_uris)
-        self.assertIn("max://selected-device", resource_uris)
-        self.assertIn("max://patcher/current", resource_uris)
+        self.assertEqual(
+            max_resource_uris,
+            {"max://status", "max://selected-device", "max://patcher/current"},
+        )
         self.assertIn("live://track/{track_index}", template_uris)
         self.assertIn("live://scene/{scene_index}", template_uris)
         self.assertIn("live://device/{track_index}/{device_index}", template_uris)
@@ -108,6 +110,31 @@ class ResourceTests(unittest.TestCase):
         self.assertEqual(payload["max_bridge"]["port"], 9881)
         self.assertEqual(len(payload["warnings"]), 1)
         self.assertIn("Max bridge", payload["warnings"][0])
+
+    @mock.patch("livemcp.resources.session.get_livemcp_status")
+    def test_max_status_resource_filters_only_max_warnings_case_insensitively(self, get_livemcp_status):
+        get_livemcp_status.return_value = {
+            "remote_reachable": False,
+            "remote_error": "socket timeout",
+            "max_bridge": {"reachable": False, "port": 9881},
+            "warnings": [
+                "MAX bridge needs a local attach.",
+                "LiveMCP socket is not currently reachable.",
+                "max device selection is unavailable.",
+            ],
+        }
+
+        contents = anyio.run(server.mcp.read_resource, "max://status")
+        payload = json.loads(contents[0].content)
+
+        self.assertEqual(payload["remote_error"], "socket timeout")
+        self.assertEqual(
+            payload["warnings"],
+            [
+                "MAX bridge needs a local attach.",
+                "max device selection is unavailable.",
+            ],
+        )
 
     @mock.patch("livemcp.resources.max_tools.get_selected_max_device")
     def test_reads_selected_max_device_resource(self, get_selected_max_device):
