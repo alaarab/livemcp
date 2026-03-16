@@ -17,6 +17,7 @@ BRIDGE_RUNTIME_FILENAME = "device_bridge.js"
 BRIDGE_SERVER_FILENAME = "device_server.js"
 BRIDGE_SCHEMA_FILENAME = "schema.json"
 DEFAULT_BRIDGE_PORT = 9881
+DEBUG_OUTPUT_DIRNAME = "_Debug"
 APPVERSION = {
     "major": 8,
     "minor": 6,
@@ -56,7 +57,7 @@ def get_user_library_root() -> Path:
 def get_probe_device_dir(root: Path | None = None) -> Path:
     """Return the folder where the bridge probe device should be written."""
     base = Path(root) if root is not None else get_user_library_root()
-    return base / "Presets" / "Audio Effects" / "Max Audio Effect"
+    return base / "Presets" / "Audio Effects" / "Max Audio Effect" / DEBUG_OUTPUT_DIRNAME
 
 
 def get_probe_device_path(root: Path | None = None) -> Path:

@@ -13,7 +13,7 @@ Files:
 The intended v1 flow is:
 
 1. Install the bridge probe with `livemcp --install-max-bridge`.
-2. Load `LiveMCP Bridge Probe.amxd` in Ableton Live.
+2. Load `_Debug/LiveMCP Bridge Probe.amxd` in Ableton Live.
 3. Select that device.
 4. Use `get_selected_max_device`, `get_current_patcher`, `list_patcher_boxes`,
    `create_box`, `set_presentation_rect`, and `save_max_device` through LiveMCP.

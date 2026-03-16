@@ -29,9 +29,10 @@ The steady-state edit path is native and local:
 GUI scripting is not the main edit architecture. At most, it can remain an optional bootstrap helper for opening a legacy device editor when no native bridge session exists yet.
 
 Current limitation: v1 is intentionally bridge-enabled-device only. The
-packaged `LiveMCP Bridge Probe.amxd` is the supported reference device. Generic
-third-party M4L devices without the packaged bridge runtime remain explicit
-unsupported/bootstrap-required cases.
+packaged `LiveMCP Bridge Probe.amxd` in the User Library `Max Audio Effect/_Debug`
+folder is the supported reference device. Generic third-party M4L devices
+without the packaged bridge runtime remain explicit unsupported/bootstrap-required
+cases.
 
 ## Current architecture audit
 
