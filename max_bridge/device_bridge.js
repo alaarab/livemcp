@@ -101,6 +101,9 @@ function handleRequest(request) {
     if (command === "list_boxes") {
         return okEnvelope(requestId, listBoxesResult(params));
     }
+    if (command === "list_named_boxes") {
+        return okEnvelope(requestId, listNamedBoxesResult(params));
+    }
     if (command === "get_box_attrs") {
         return okEnvelope(requestId, getBoxAttrs(params));
     }
@@ -227,6 +230,14 @@ function listBoxesResult(params) {
     return {
         "bridge_session_id": session.bridge_session_id,
         "boxes": listBoxes()
+    };
+}
+
+function listNamedBoxesResult(params) {
+    var session = validateActiveSession(params);
+    return {
+        "bridge_session_id": session.bridge_session_id,
+        "boxes": listNamedBoxes()
     };
 }
 
@@ -484,6 +495,20 @@ function listBoxes() {
     var obj = this.patcher.firstobject;
     while (obj) {
         boxes.push(boxSummary(obj));
+        obj = obj.nextobject;
+    }
+    return boxes;
+}
+
+function listNamedBoxes() {
+    var boxes = [];
+    var obj = this.patcher.firstobject;
+    var varname;
+    while (obj) {
+        varname = safeBoxAttr(obj, "varname");
+        if (varname) {
+            boxes.push(boxSummary(obj));
+        }
         obj = obj.nextobject;
     }
     return boxes;

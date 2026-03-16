@@ -19,6 +19,7 @@
     "show_editor",
     "get_current_patcher",
     "list_boxes",
+    "list_named_boxes",
     "get_box_attrs",
     "set_box_attrs",
     "create_box",
