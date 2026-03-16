@@ -67,6 +67,11 @@ def _build_parser() -> argparse.ArgumentParser:
     actions.add_argument("--uninstall", action="store_true", help="Uninstall the LiveMCP remote script")
     actions.add_argument("--install-status", action="store_true", help="Show remote-script install status")
     actions.add_argument(
+        "--validation-readiness",
+        action="store_true",
+        help="Show whether Ableton is ready for plugin QA: remote reachability, selected track/device, and Max bridge state",
+    )
+    actions.add_argument(
         "--install-max-bridge",
         action="store_true",
         help="Install the LiveMCP Max bridge probe device and sidecar assets into the User Library",
@@ -139,6 +144,10 @@ def main(argv: list[str] | None = None):
         from .installer import get_install_status
 
         print(json.dumps(get_install_status(), indent=2))
+    elif args.validation_readiness:
+        import json
+
+        print(json.dumps(session.get_validation_readiness(), indent=2))
     elif args.uninstall:
         from .installer import uninstall
 

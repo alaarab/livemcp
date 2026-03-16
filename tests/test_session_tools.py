@@ -133,10 +133,54 @@ class SessionToolTests(unittest.TestCase):
             result["warnings"],
         )
 
+    @mock.patch("livemcp.tools.session.get_selected_device")
+    @mock.patch("livemcp.tools.session.get_selected_track")
+    @mock.patch("livemcp.tools.session.get_livemcp_status")
+    def test_get_validation_readiness_summarizes_selection_and_bridge_state(
+        self,
+        get_livemcp_status,
+        get_selected_track,
+        get_selected_device,
+    ):
+        get_livemcp_status.return_value = {
+            "remote_reachable": True,
+            "remote_error": None,
+            "max_bridge": {"reachable": False},
+            "warnings": [
+                "Max bridge is not currently reachable; Max for Live patcher tools will fail until a local bridge session is available."
+            ],
+        }
+        get_selected_track.return_value = {
+            "index": 2,
+            "name": "3-Audio",
+            "type": "audio",
+        }
+        get_selected_device.return_value = {
+            "selected_device": {
+                "track_index": 2,
+                "device_index": 2,
+                "device_name": "Linear Phase EQ",
+            }
+        }
+
+        result = session.get_validation_readiness()
+
+        self.assertTrue(result["remote_reachable"])
+        self.assertEqual(result["selected_track"]["name"], "3-Audio")
+        self.assertEqual(result["selected_device"]["device_name"], "Linear Phase EQ")
+        self.assertTrue(result["ready_for_live_validation"])
+        self.assertFalse(result["ready_for_max_inspection"])
+        self.assertIn("Ready for Live-side validation of Linear Phase EQ.", result["suggested_next_steps"])
+        self.assertIn(
+            "Max bridge is not attached; load or focus a bridge-enabled device session before using Max patcher inspection tools.",
+            result["suggested_next_steps"],
+        )
+
     def test_controller_tools_publish_output_schema(self):
         structured_tools = [
             "get_session_info",
             "get_livemcp_status",
+            "get_validation_readiness",
             "get_view_state",
             "get_selected_track",
             "get_selected_scene",

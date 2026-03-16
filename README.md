@@ -9,7 +9,7 @@ It gives an MCP client two useful layers:
 
 The point is control and inspection. LiveMCP is built for tasks like selecting tracks, focusing views, firing clips, changing device parameters, checking transport state, handling startup dialogs, and keeping the remote script in sync with the package. It is not trying to be an AI songwriter.
 
-[![Tools](https://img.shields.io/badge/Tools-218-blueviolet)](https://github.com/alaarab/livemcp) [![Python](https://img.shields.io/badge/Python-3.10+-3776AB)](https://python.org) [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+[![Tools](https://img.shields.io/badge/Tools-219-blueviolet)](https://github.com/alaarab/livemcp) [![Python](https://img.shields.io/badge/Python-3.10+-3776AB)](https://python.org) [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
 ## What It Is
 
@@ -25,7 +25,7 @@ The point is control and inspection. LiveMCP is built for tasks like selecting t
 
 ## At A Glance
 
-- `218` tools across session, clips, tracks, devices, mixer, arrangement, grooves, docs, and Max patcher control
+- `219` tools across session, clips, tracks, devices, mixer, arrangement, grooves, docs, and Max patcher control
 - controller-oriented MCP resources like `live://status`, `live://view/current`, `live://track/{track_index}`, and `max://selected-device`
 - local docs sync and offline search across official Ableton and Cycling '74 documentation
 - packaged install-status and Ableton restart helpers
@@ -86,6 +86,7 @@ uv run livemcp --install --symlink-install
 Once the server is running, the most useful starting points are:
 
 - read `live://status`
+- run `uv run livemcp --validation-readiness`
 - read `live://session/current`
 - read `live://view/current`
 - read `max://status` before using Max for Live patcher tools
@@ -150,6 +151,15 @@ Use tools when you want to change something:
 
 That split matters. Tools are for actions. Resources are for inspection.
 
+For plugin QA sessions, the quickest local readiness check is:
+
+```bash
+uv run livemcp --validation-readiness
+```
+
+That reports remote-script reachability, the currently selected track/device,
+and whether the Max bridge is attached for patcher inspection.
+
 ## Ableton Lifecycle Helpers (macOS)
 
 Use the packaged helper when Live gets stuck on save, crash-recovery, or restore prompts:
@@ -177,7 +187,7 @@ Config file locations:
 
 ## Capability Map
 
-You do not need to memorize 218 commands to use LiveMCP well. The useful mental model is:
+You do not need to memorize 219 commands to use LiveMCP well. The useful mental model is:
 
 - session tools for transport, selection, views, dialogs, and global state
 - track and mixer tools for routing, arm/solo/mute, levels, and return paths
@@ -191,7 +201,7 @@ The tables below are the full reference.
 
 | Category | Count |
 |----------|------:|
-| Session | 74 |
+| Session | 75 |
 | Clips | 40 |
 | Tracks | 32 |
 | Devices | 27 |
@@ -200,7 +210,7 @@ The tables below are the full reference.
 | Grooves | 5 |
 | Docs | 4 |
 | Max | 13 |
-| **Total** | **218** |
+| **Total** | **219** |
 
 ## MCP Resources
 
@@ -451,7 +461,7 @@ rather than falling back to GUI scripting.
 │                Package-Side MCP Server                   │
 │            src/livemcp/ (FastMCP)                        │
 │                                                          │
-│   218 tools + live://, max://, and docs:// resources     │
+│   219 tools + live://, max://, and docs:// resources     │
 │   structured controller state + action calls             │
 └────────────────────────┬────────────────────────────────┘
                          │ TCP Socket (localhost:9877)
