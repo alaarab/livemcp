@@ -435,8 +435,9 @@ These are meant for controller-style reads where a client wants stable Ableton s
 
 V1 Max bridge note: the currently selected Max device must be bridge-enabled and
 host the local bridge runtime itself. The packaged `LiveMCP Bridge Probe.amxd`
-does this today. Non-bridge-enabled third-party M4L devices remain explicit
-unsupported cases rather than falling back to GUI scripting.
+in the User Library `Max Audio Effect/_Debug` folder does this today.
+Non-bridge-enabled third-party M4L devices remain explicit unsupported cases
+rather than falling back to GUI scripting.
 
 ## How It Works
 

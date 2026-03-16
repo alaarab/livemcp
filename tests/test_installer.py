@@ -149,8 +149,10 @@ class InstallerTests(unittest.TestCase):
 
             self.assertTrue(Path(result["device_path"]).exists())
             self.assertTrue(result["device_path"].endswith(".amxd"))
+            self.assertIn("/Max Audio Effect/_Debug/", result["device_path"])
             for asset_path in result["asset_paths"]:
                 self.assertTrue(Path(asset_path).exists())
+                self.assertIn("/Max Audio Effect/_Debug/", asset_path)
 
     def test_get_max_bridge_status_reports_probe_install(self):
         with tempfile.TemporaryDirectory() as temp_dir:

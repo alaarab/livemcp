@@ -285,7 +285,10 @@ def install_max_bridge(root: Path | None = None) -> dict:
     for asset_path in result["asset_paths"]:
         print(f"Installed bridge asset: {asset_path}")
     print()
-    print("Load the LiveMCP Bridge Probe device in Ableton, select it, then use the max:// tools.")
+    print(
+        "Load _Debug/LiveMCP Bridge Probe in Ableton, select it, "
+        "then use the max:// tools."
+    )
     return result
 
 
