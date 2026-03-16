@@ -124,6 +124,20 @@ class SelectedDeviceInfo(TypedDict, total=False):
     track: dict[str, Any]
 
 
+class ValidationReadinessInfo(TypedDict, total=False):
+    remote_reachable: bool
+    remote_error: Optional[str]
+    max_bridge_reachable: bool
+    selected_track: Optional[SelectedTrackInfo]
+    selected_track_error: Optional[str]
+    selected_device: Optional[SelectedDeviceState]
+    selected_device_error: Optional[str]
+    ready_for_live_validation: bool
+    ready_for_max_inspection: bool
+    warnings: list[str]
+    suggested_next_steps: list[str]
+
+
 class SelectedParameterState(TypedDict, total=False):
     name: str
     value: float
@@ -604,6 +618,78 @@ def get_livemcp_status() -> LiveMCPStatus:
     return status
 
 
+def get_validation_readiness() -> ValidationReadinessInfo:
+    """Summarize whether Ableton is ready for flagship plugin validation.
+
+    Returns remote reachability, selected track/device state, Max bridge
+    availability, and suggested next steps for Live-side or Max-side QA.
+    """
+    status = get_livemcp_status()
+    max_bridge = status.get("max_bridge") or {}
+    result: ValidationReadinessInfo = {
+        "remote_reachable": status.get("remote_reachable", False),
+        "remote_error": status.get("remote_error"),
+        "max_bridge_reachable": bool(max_bridge.get("reachable")),
+        "selected_track": None,
+        "selected_track_error": None,
+        "selected_device": None,
+        "selected_device_error": None,
+        "ready_for_live_validation": False,
+        "ready_for_max_inspection": False,
+        "warnings": list(status.get("warnings", [])),
+        "suggested_next_steps": [],
+    }
+
+    if result["remote_reachable"]:
+        try:
+            result["selected_track"] = get_selected_track()
+        except Exception as exc:
+            result["selected_track_error"] = str(exc)
+            result["warnings"].append(
+                "Could not read the currently selected track from Ableton."
+            )
+
+        try:
+            device_info = get_selected_device()
+            result["selected_device"] = device_info.get("selected_device")
+        except Exception as exc:
+            result["selected_device_error"] = str(exc)
+            result["warnings"].append(
+                "Could not read the currently selected device from Ableton."
+            )
+
+    if not result["remote_reachable"]:
+        result["suggested_next_steps"].append(
+            "Restore LiveMCP remote reachability before plugin QA; if needed, restart Ableton or use `uv run livemcp --restart-ableton`."
+        )
+    elif not result["selected_device"]:
+        result["suggested_next_steps"].append(
+            "Select the target plugin device in Ableton before starting Live-side validation."
+        )
+    else:
+        device_name = result["selected_device"].get("device_name") or "selected device"
+        result["suggested_next_steps"].append(
+            f"Ready for Live-side validation of {device_name}."
+        )
+
+    if not result["max_bridge_reachable"]:
+        result["suggested_next_steps"].append(
+            "Max bridge is not attached; load or focus a bridge-enabled device session before using Max patcher inspection tools."
+        )
+    else:
+        result["suggested_next_steps"].append(
+            "Max bridge is attached; patcher inspection tools are available."
+        )
+
+    result["ready_for_live_validation"] = bool(
+        result["remote_reachable"] and result["selected_device"]
+    )
+    result["ready_for_max_inspection"] = bool(
+        result["ready_for_live_validation"] and result["max_bridge_reachable"]
+    )
+    return result
+
+
 def get_application_dialog() -> ApplicationDialogInfo:
     """Get information about the current Ableton dialog box.
 
@@ -1026,6 +1112,7 @@ TOOLS = [
     get_application_info,
     get_livemcp_info,
     get_livemcp_status,
+    get_validation_readiness,
     get_application_dialog,
     press_current_dialog_button,
     get_application_cpu_usage,

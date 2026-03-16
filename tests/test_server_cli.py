@@ -28,6 +28,18 @@ class ServerCliTests(unittest.TestCase):
         get_install_status.assert_called_once_with()
         self.assertIn('"installed": true', stdout.getvalue().lower())
 
+    @mock.patch(
+        "livemcp.server.session.get_validation_readiness",
+        return_value={"ready_for_live_validation": True, "selected_device": {"device_name": "Parametric EQ"}},
+    )
+    def test_main_prints_validation_readiness(self, get_validation_readiness):
+        with mock.patch("sys.stdout", new=io.StringIO()) as stdout:
+            server.main(["--validation-readiness"])
+
+        get_validation_readiness.assert_called_once_with()
+        self.assertIn('"ready_for_live_validation": true', stdout.getvalue().lower())
+        self.assertIn("Parametric EQ", stdout.getvalue())
+
     @mock.patch("livemcp.installer.install_max_bridge", return_value={"device_path": "/tmp/Bridge.amxd"})
     def test_main_installs_max_bridge(self, install_max_bridge):
         with mock.patch("sys.stdout", new=io.StringIO()) as stdout:
