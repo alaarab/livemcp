@@ -9,7 +9,7 @@ It gives an MCP client two useful layers:
 
 The point is control and inspection. LiveMCP is built for tasks like selecting tracks, focusing views, firing clips, changing device parameters, checking transport state, handling startup dialogs, and keeping the remote script in sync with the package. It is not trying to be an AI songwriter.
 
-[![Tools](https://img.shields.io/badge/Tools-219-blueviolet)](https://github.com/alaarab/livemcp) [![Python](https://img.shields.io/badge/Python-3.10+-3776AB)](https://python.org) [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+[![Tools](https://img.shields.io/badge/Tools-220-blueviolet)](https://github.com/alaarab/livemcp) [![Python](https://img.shields.io/badge/Python-3.10+-3776AB)](https://python.org) [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
 ## What It Is
 
@@ -25,7 +25,7 @@ The point is control and inspection. LiveMCP is built for tasks like selecting t
 
 ## At A Glance
 
-- `219` tools across session, clips, tracks, devices, mixer, arrangement, grooves, docs, and Max patcher control
+- `220` tools across session, clips, tracks, devices, mixer, arrangement, grooves, docs, and Max patcher control
 - controller-oriented MCP resources like `live://status`, `live://view/current`, `live://track/{track_index}`, and `max://selected-device`
 - local docs sync and offline search across official Ableton and Cycling '74 documentation
 - packaged install-status and Ableton restart helpers
@@ -168,6 +168,8 @@ uv run livemcp --confirm-validation-target --track-name "PEQ V2" --device-name "
 
 That confirms the intended comparison device is actually selected before you trust a screenshot.
 
+For downstream generated-device QA (for example, validating `m4l-builder` output), keep the loop minimal: run `--validation-readiness`, confirm the exact target with `--confirm-validation-target`, then capture screenshots/measurements only after those checks pass.
+
 ## Ableton Lifecycle Helpers (macOS)
 
 Use the packaged helper when Live gets stuck on save, crash-recovery, or restore prompts:
@@ -195,7 +197,7 @@ Config file locations:
 
 ## Capability Map
 
-You do not need to memorize 219 commands to use LiveMCP well. The useful mental model is:
+You do not need to memorize 220 commands to use LiveMCP well. The useful mental model is:
 
 - session tools for transport, selection, views, dialogs, and global state
 - track and mixer tools for routing, arm/solo/mute, levels, and return paths
@@ -209,7 +211,7 @@ The tables below are the full reference.
 
 | Category | Count |
 |----------|------:|
-| Session | 75 |
+| Session | 76 |
 | Clips | 40 |
 | Tracks | 32 |
 | Devices | 27 |
@@ -218,7 +220,7 @@ The tables below are the full reference.
 | Grooves | 5 |
 | Docs | 4 |
 | Max | 13 |
-| **Total** | **219** |
+| **Total** | **220** |
 
 ## MCP Resources
 
@@ -253,7 +255,7 @@ These are meant for controller-style reads where a client wants stable Ableton s
 | `docs://page/{page_id}` | One full docs page from the local snapshot |
 
 <details>
-<summary>Session Tools (74)</summary>
+<summary>Session Tools (76)</summary>
 
 | Tool | Description |
 |------|-------------|
@@ -469,7 +471,7 @@ rather than falling back to GUI scripting.
 │                Package-Side MCP Server                   │
 │            src/livemcp/ (FastMCP)                        │
 │                                                          │
-│   219 tools + live://, max://, and docs:// resources     │
+│   220 tools + live://, max://, and docs:// resources     │
 │   structured controller state + action calls             │
 └────────────────────────┬────────────────────────────────┘
                          │ TCP Socket (localhost:9877)
@@ -531,6 +533,22 @@ bash scripts/publish.sh --dry-run
 uv run python -c "from livemcp.server import mcp; print(len(mcp._tool_manager._tools), 'tools')"
 ```
 
+For reproducible local verification from a fresh checkout:
+
+```bash
+# Install lint/test tooling declared in pyproject.toml
+uv sync --group dev
+
+# Unit tests
+uv run python -m unittest discover -s tests -v
+
+# Lint
+uv run ruff check src tests
+
+# Tool registration sanity check (expected: 220)
+uv run python -c "from livemcp.server import mcp; print(len(mcp._tool_manager._tools), 'tools')"
+```
+
 For the local dev loop on macOS, the useful rhythm is:
 
 1. `uv run livemcp --install --symlink-install`
@@ -547,19 +565,21 @@ livemcp/
 │   ├── server.py             # FastMCP app, registers all tool modules
 │   ├── connection.py         # TCP client to remote script
 │   ├── resources.py          # live:// MCP resources for controller state
-│   └── tools/                # 7 tool modules
-│       ├── session.py        # 74 session tools
+│   └── tools/                # 9 tool modules
+│       ├── session.py        # 76 session tools
 │       ├── clips.py          # 40 clip tools
 │       ├── tracks.py         # 32 track tools
 │       ├── devices.py        # 27 device tools
 │       ├── mixer.py          # 14 mixer tools
 │       ├── arrangement.py    # 9 arrangement tools
-│       └── grooves.py        # 5 groove tools
+│       ├── grooves.py        # 5 groove tools
+│       ├── docs.py           # 4 docs tools
+│       └── max.py            # 13 Max patcher tools
 ├── remote_script/LiveMCP/    # Ableton MIDI Remote Script
 │   ├── __init__.py           # create_instance() entry point
 │   ├── server.py             # TCP server + handler dispatch
 │   ├── browser.py            # 3-strategy device loading
-│   └── handlers/             # 7 handler modules (matching tools/)
+│   └── handlers/             # 8 handler modules (Live + Max; docs tools are package-local)
 └── scripts/
     ├── install.sh            # Wrapper for `uv run livemcp --install`
     ├── dev_install.sh        # Wrapper for `uv run livemcp --install --symlink-install`

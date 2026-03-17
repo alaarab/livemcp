@@ -35,6 +35,11 @@ Homepage = "https://github.com/alaarab/livemcp"
 Repository = "https://github.com/alaarab/livemcp"
 "Bug Tracker" = "https://github.com/alaarab/livemcp/issues"
 
+[dependency-groups]
+dev = [
+    "ruff>=0.11.0",
+]
+
 [tool.hatchling.build]
 packages = ["src/livemcp"]
 
