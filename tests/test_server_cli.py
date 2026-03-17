@@ -40,6 +40,31 @@ class ServerCliTests(unittest.TestCase):
         self.assertIn('"ready_for_live_validation": true', stdout.getvalue().lower())
         self.assertIn("Parametric EQ", stdout.getvalue())
 
+    @mock.patch(
+        "livemcp.server.session.confirm_validation_target",
+        return_value={"matches": True, "message": "ok"},
+    )
+    def test_main_prints_validation_target_confirmation(self, confirm_validation_target):
+        with mock.patch("sys.stdout", new=io.StringIO()) as stdout:
+            server.main(
+                [
+                    "--confirm-validation-target",
+                    "--track-name",
+                    "PEQ V2",
+                    "--device-name",
+                    "Parametric EQ V2",
+                ]
+            )
+
+        confirm_validation_target.assert_called_once_with(
+            track_index=None,
+            track_name="PEQ V2",
+            device_index=None,
+            device_name="Parametric EQ V2",
+        )
+        self.assertIn('"matches": true', stdout.getvalue().lower())
+        self.assertIn("ok", stdout.getvalue())
+
     @mock.patch("livemcp.installer.install_max_bridge", return_value={"device_path": "/tmp/Bridge.amxd"})
     def test_main_installs_max_bridge(self, install_max_bridge):
         with mock.patch("sys.stdout", new=io.StringIO()) as stdout:
@@ -97,6 +122,20 @@ class ServerCliTests(unittest.TestCase):
         with self.assertRaises(SystemExit) as context:
             with mock.patch("sys.stderr", new=io.StringIO()):
                 server.main(["--docs-source", "ableton-live-manual-12"])
+
+        self.assertEqual(context.exception.code, 2)
+
+    def test_main_rejects_validation_target_args_without_flag(self):
+        with self.assertRaises(SystemExit) as context:
+            with mock.patch("sys.stderr", new=io.StringIO()):
+                server.main(["--track-name", "PEQ V2"])
+
+        self.assertEqual(context.exception.code, 2)
+
+    def test_main_rejects_validation_target_flag_without_expected_selector(self):
+        with self.assertRaises(SystemExit) as context:
+            with mock.patch("sys.stderr", new=io.StringIO()):
+                server.main(["--confirm-validation-target"])
 
         self.assertEqual(context.exception.code, 2)
 

@@ -176,11 +176,65 @@ class SessionToolTests(unittest.TestCase):
             result["suggested_next_steps"],
         )
 
+    @mock.patch("livemcp.tools.session.get_validation_readiness")
+    def test_confirm_validation_target_reports_success(self, get_validation_readiness):
+        get_validation_readiness.return_value = {
+            "remote_reachable": True,
+            "selected_track": {"index": 3, "name": "PEQ V2"},
+            "selected_device": {
+                "track_index": 3,
+                "device_index": 1,
+                "device_name": "Parametric EQ V2",
+            },
+            "warnings": [],
+            "suggested_next_steps": ["Ready for Live-side validation of Parametric EQ V2."],
+        }
+
+        result = session.confirm_validation_target(
+            track_name="PEQ V2",
+            device_name="Parametric EQ V2",
+        )
+
+        self.assertTrue(result["matches"])
+        self.assertTrue(result["track_matches"])
+        self.assertTrue(result["device_matches"])
+        self.assertIn("matches the expected validation target", result["message"])
+
+    @mock.patch("livemcp.tools.session.get_validation_readiness")
+    def test_confirm_validation_target_reports_mismatch(self, get_validation_readiness):
+        get_validation_readiness.return_value = {
+            "remote_reachable": True,
+            "selected_track": {"index": 5, "name": "LPEQ V2"},
+            "selected_device": {
+                "track_index": 5,
+                "device_index": 1,
+                "device_name": "Linear Phase EQ V2",
+            },
+            "warnings": [],
+            "suggested_next_steps": [],
+        }
+
+        result = session.confirm_validation_target(
+            track_name="PEQ V2",
+            device_name="Parametric EQ V2",
+        )
+
+        self.assertFalse(result["matches"])
+        self.assertFalse(result["track_matches"])
+        self.assertFalse(result["device_matches"])
+        self.assertIn("Select the intended comparison track/device", result["suggested_next_steps"][0])
+        self.assertIn("Expected track 'PEQ V2', device 'Parametric EQ V2'", result["message"])
+
+    def test_confirm_validation_target_requires_expected_selector(self):
+        with self.assertRaises(ValueError):
+            session.confirm_validation_target()
+
     def test_controller_tools_publish_output_schema(self):
         structured_tools = [
             "get_session_info",
             "get_livemcp_status",
             "get_validation_readiness",
+            "confirm_validation_target",
             "get_view_state",
             "get_selected_track",
             "get_selected_scene",

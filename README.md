@@ -160,6 +160,14 @@ uv run livemcp --validation-readiness
 That reports remote-script reachability, the currently selected track/device,
 and whether the Max bridge is attached for patcher inspection.
 
+For screenshot QA, use the stricter target check:
+
+```bash
+uv run livemcp --confirm-validation-target --track-name "PEQ V2" --device-name "Parametric EQ V2"
+```
+
+That confirms the intended comparison device is actually selected before you trust a screenshot.
+
 ## Ableton Lifecycle Helpers (macOS)
 
 Use the packaged helper when Live gets stuck on save, crash-recovery, or restore prompts:
