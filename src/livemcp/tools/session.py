@@ -138,6 +138,22 @@ class ValidationReadinessInfo(TypedDict, total=False):
     suggested_next_steps: list[str]
 
 
+class ValidationTargetConfirmationInfo(TypedDict, total=False):
+    remote_reachable: bool
+    selected_track: Optional[SelectedTrackInfo]
+    selected_device: Optional[SelectedDeviceState]
+    expected_track_index: Optional[int]
+    expected_track_name: Optional[str]
+    expected_device_index: Optional[int]
+    expected_device_name: Optional[str]
+    track_matches: Optional[bool]
+    device_matches: Optional[bool]
+    matches: bool
+    message: str
+    warnings: list[str]
+    suggested_next_steps: list[str]
+
+
 class SelectedParameterState(TypedDict, total=False):
     name: str
     value: float
@@ -690,6 +706,131 @@ def get_validation_readiness() -> ValidationReadinessInfo:
     return result
 
 
+def _normalized_name(value: Optional[str]) -> Optional[str]:
+    if value is None:
+        return None
+    return value.strip().casefold()
+
+
+def _expected_string_matches(actual: Optional[str], expected: Optional[str]) -> Optional[bool]:
+    if expected is None:
+        return None
+    return _normalized_name(actual) == _normalized_name(expected)
+
+
+def _expected_int_matches(actual: Optional[int], expected: Optional[int]) -> Optional[bool]:
+    if expected is None:
+        return None
+    return actual == expected
+
+
+def confirm_validation_target(
+    *,
+    track_index: Optional[int] = None,
+    track_name: Optional[str] = None,
+    device_index: Optional[int] = None,
+    device_name: Optional[str] = None,
+) -> ValidationTargetConfirmationInfo:
+    """Confirm that the intended comparison device is the current Ableton selection.
+
+    Provide at least one expected selector. Track and device names match
+    case-insensitively after trimming whitespace.
+    """
+    if (
+        track_index is None
+        and track_name is None
+        and device_index is None
+        and device_name is None
+    ):
+        raise ValueError(
+            "Provide at least one expected track/device selector to confirm the validation target."
+        )
+
+    readiness = get_validation_readiness()
+    selected_track = readiness.get("selected_track")
+    selected_device = readiness.get("selected_device")
+
+    actual_track_index = selected_track.get("index") if selected_track else None
+    actual_track_name = selected_track.get("name") if selected_track else None
+    actual_device_index = selected_device.get("device_index") if selected_device else None
+    actual_device_name = selected_device.get("device_name") if selected_device else None
+
+    track_checks = [
+        match
+        for match in (
+            _expected_int_matches(actual_track_index, track_index),
+            _expected_string_matches(actual_track_name, track_name),
+        )
+        if match is not None
+    ]
+    device_checks = [
+        match
+        for match in (
+            _expected_int_matches(actual_device_index, device_index),
+            _expected_string_matches(actual_device_name, device_name),
+        )
+        if match is not None
+    ]
+
+    track_matches = all(track_checks) if track_checks else None
+    device_matches = all(device_checks) if device_checks else None
+    selection_matches = all(
+        check is not False for check in (track_matches, device_matches) if check is not None
+    )
+    matches = bool(readiness.get("remote_reachable") and selection_matches)
+
+    expected_bits = []
+    if track_name is not None:
+        expected_bits.append(f"track '{track_name}'")
+    elif track_index is not None:
+        expected_bits.append(f"track index {track_index}")
+    if device_name is not None:
+        expected_bits.append(f"device '{device_name}'")
+    elif device_index is not None:
+        expected_bits.append(f"device index {device_index}")
+
+    if not readiness.get("remote_reachable"):
+        message = "LiveMCP is not reachable; cannot confirm the intended validation target."
+    elif matches:
+        message = "Selected Ableton track/device matches the expected validation target."
+    else:
+        actual_track_desc = actual_track_name or (
+            f"track index {actual_track_index}" if actual_track_index is not None else "no track"
+        )
+        actual_device_desc = actual_device_name or (
+            f"device index {actual_device_index}" if actual_device_index is not None else "no device"
+        )
+        message = (
+            "Expected {} but Ableton currently has {} / {} selected.".format(
+                ", ".join(expected_bits) or "the requested validation target",
+                actual_track_desc,
+                actual_device_desc,
+            )
+        )
+
+    result: ValidationTargetConfirmationInfo = {
+        "remote_reachable": bool(readiness.get("remote_reachable")),
+        "selected_track": selected_track,
+        "selected_device": selected_device,
+        "expected_track_index": track_index,
+        "expected_track_name": track_name,
+        "expected_device_index": device_index,
+        "expected_device_name": device_name,
+        "track_matches": track_matches,
+        "device_matches": device_matches,
+        "matches": matches,
+        "message": message,
+        "warnings": list(readiness.get("warnings", [])),
+        "suggested_next_steps": list(readiness.get("suggested_next_steps", [])),
+    }
+    if not matches and readiness.get("remote_reachable"):
+        result["suggested_next_steps"].insert(
+            0,
+            "Select the intended comparison track/device in Ableton before capturing screenshots.",
+        )
+    return result
+
+
 def get_application_dialog() -> ApplicationDialogInfo:
     """Get information about the current Ableton dialog box.
 
@@ -1113,6 +1254,7 @@ TOOLS = [
     get_livemcp_info,
     get_livemcp_status,
     get_validation_readiness,
+    confirm_validation_target,
     get_application_dialog,
     press_current_dialog_button,
     get_application_cpu_usage,

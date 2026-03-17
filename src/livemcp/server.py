@@ -72,6 +72,11 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Show whether Ableton is ready for plugin QA: remote reachability, selected track/device, and Max bridge state",
     )
     actions.add_argument(
+        "--confirm-validation-target",
+        action="store_true",
+        help="Confirm that the expected comparison track/device is currently selected before QA screenshots",
+    )
+    actions.add_argument(
         "--install-max-bridge",
         action="store_true",
         help="Install the LiveMCP Max bridge probe device and sidecar assets into the User Library",
@@ -110,6 +115,24 @@ def _build_parser() -> argparse.ArgumentParser:
         choices=sorted(DOC_SOURCES),
         help="Limit docs sync to one or more configured source ids; only valid with --sync-docs",
     )
+    parser.add_argument(
+        "--track-index",
+        type=int,
+        help="Expected selected track index; only valid with --confirm-validation-target",
+    )
+    parser.add_argument(
+        "--track-name",
+        help="Expected selected track name; only valid with --confirm-validation-target",
+    )
+    parser.add_argument(
+        "--device-index",
+        type=int,
+        help="Expected selected device index; only valid with --confirm-validation-target",
+    )
+    parser.add_argument(
+        "--device-name",
+        help="Expected selected device name; only valid with --confirm-validation-target",
+    )
     return parser
 
 
@@ -124,6 +147,22 @@ def main(argv: list[str] | None = None):
         parser.error("--symlink-install can only be used with --install")
     if args.docs_source and not args.sync_docs:
         parser.error("--docs-source can only be used with --sync-docs")
+    if (
+        (args.track_index is not None or args.track_name or args.device_index is not None or args.device_name)
+        and not args.confirm_validation_target
+    ):
+        parser.error(
+            "--track-index/--track-name/--device-index/--device-name can only be used with --confirm-validation-target"
+        )
+    if args.confirm_validation_target and (
+        args.track_index is None
+        and not args.track_name
+        and args.device_index is None
+        and not args.device_name
+    ):
+        parser.error(
+            "--confirm-validation-target requires at least one of --track-index, --track-name, --device-index, or --device-name"
+        )
 
     if args.install:
         from .installer import install
@@ -148,6 +187,20 @@ def main(argv: list[str] | None = None):
         import json
 
         print(json.dumps(session.get_validation_readiness(), indent=2))
+    elif args.confirm_validation_target:
+        import json
+
+        print(
+            json.dumps(
+                session.confirm_validation_target(
+                    track_index=args.track_index,
+                    track_name=args.track_name,
+                    device_index=args.device_index,
+                    device_name=args.device_name,
+                ),
+                indent=2,
+            )
+        )
     elif args.uninstall:
         from .installer import uninstall
 
