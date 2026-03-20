@@ -1,6 +1,7 @@
 """TCP socket connection to the LiveMCP remote script running inside Ableton Live."""
 
 import json
+import select
 import socket
 import time
 import threading
@@ -54,13 +55,34 @@ class AbletonConnection:
         self._socket.sendall(payload + MESSAGE_TERMINATOR)
         self._socket.settimeout(TIMEOUT)
 
+        deadline = time.monotonic() + TIMEOUT
         while MESSAGE_TERMINATOR not in self._recv_buffer:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                break
+            ready, _, _ = select.select([self._socket], [], [], min(remaining, 2.0))
+            if not ready:
+                # No newline yet — try parsing what we have (legacy compat)
+                if self._recv_buffer.strip():
+                    try:
+                        json.loads(self._recv_buffer.decode("utf-8"))
+                        break  # Valid JSON without terminator
+                    except (json.JSONDecodeError, ValueError):
+                        pass
+                if remaining <= 0:
+                    raise socket.timeout("timed out")
+                continue
             chunk = self._socket.recv(RECV_SIZE)
             if not chunk:
                 raise ConnectionError("Remote script closed the connection")
             self._recv_buffer += chunk
 
-        message, _, self._recv_buffer = self._recv_buffer.partition(MESSAGE_TERMINATOR)
+        if MESSAGE_TERMINATOR in self._recv_buffer:
+            message, _, self._recv_buffer = self._recv_buffer.partition(MESSAGE_TERMINATOR)
+        else:
+            message = self._recv_buffer.strip()
+            self._recv_buffer = b""
+
         if not message:
             raise ConnectionError("Remote script returned an empty response")
         response = json.loads(message.decode("utf-8"))
@@ -184,13 +206,31 @@ def probe_command(command_type: str, params: dict, timeout: float = 2.0) -> dict
         sock.sendall(payload + MESSAGE_TERMINATOR)
 
         buffer = b""
+        deadline = time.monotonic() + timeout
         while MESSAGE_TERMINATOR not in buffer:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                break
+            ready, _, _ = select.select([sock], [], [], min(remaining, 1.0))
+            if not ready:
+                if buffer.strip():
+                    try:
+                        json.loads(buffer.decode("utf-8"))
+                        break
+                    except (json.JSONDecodeError, ValueError):
+                        pass
+                if remaining <= 0:
+                    raise socket.timeout("timed out")
+                continue
             chunk = sock.recv(RECV_SIZE)
             if not chunk:
                 raise ConnectionError("Remote script closed the connection")
             buffer += chunk
 
-    message, _, _ = buffer.partition(MESSAGE_TERMINATOR)
+    if MESSAGE_TERMINATOR in buffer:
+        message, _, _ = buffer.partition(MESSAGE_TERMINATOR)
+    else:
+        message = buffer.strip()
     if not message:
         raise ConnectionError("Remote script returned an empty response")
 
