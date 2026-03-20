@@ -50,7 +50,7 @@ uvx livemcp --install
 
 That finds Ableton, copies the bundled `LiveMCP` remote script into the right `MIDI Remote Scripts` folder, and leaves the package side ready to run.
 
-Install works on macOS, Windows, and WSL. The app lifecycle helpers later in this README are macOS-only.
+Install works on macOS, Windows, and WSL. The TCP bridge works across WSL2 → Windows via localhost forwarding, so you can run the MCP server in WSL while Ableton runs on the Windows host. The app lifecycle helpers later in this README are macOS-only.
 
 For local development on macOS, use a symlinked install instead:
 
