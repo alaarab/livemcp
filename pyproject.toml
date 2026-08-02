@@ -38,6 +38,7 @@ Repository = "https://github.com/alaarab/livemcp"
 [dependency-groups]
 dev = [
     "ruff>=0.11.0",
+    "pytest>=8.0.0",
 ]
 
 [tool.hatchling.build]
