@@ -43,3 +43,33 @@ class RegistryGuardTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ReadmeDriftTests(unittest.TestCase):
+    """The README quotes a tool count. Nothing regenerates it, so it drifts.
+
+    A stale count is not cosmetic here — the number is the headline claim about
+    what the server exposes, and it silently rots every time a tool is added.
+    """
+
+    def test_readme_tool_count_matches_registry(self):
+        import re
+
+        readme = (Path(__file__).resolve().parents[1] / "README.md").read_text()
+        claimed = re.findall(r"(\d+)\s+tools", readme)
+        self.assertTrue(claimed, "README no longer states a tool count")
+
+        # the live registry, not _collect_tools() — that helper takes the tool
+        # groups as varargs and returns [] when called bare.
+        actual = len(server.mcp._tool_manager._tools)
+        for n in claimed:
+            self.assertEqual(
+                int(n), actual,
+                f"README claims {n} tools, registry has {actual}. "
+                "Update the README (or this test if the phrasing moved).",
+            )
+
+    def test_qa_workflow_doc_is_linked_from_readme(self):
+        root = Path(__file__).resolve().parents[1]
+        self.assertTrue((root / "docs/plugin-qa-workflow.md").exists())
+        self.assertIn("docs/plugin-qa-workflow.md", (root / "README.md").read_text())

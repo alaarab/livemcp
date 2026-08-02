@@ -1,3 +1,4 @@
+import socket
 import threading
 import time
 import unittest
@@ -11,8 +12,23 @@ from livemcp.connection import AbletonConnection, MESSAGE_TERMINATOR
 from livemcp.errors import RemoteCommandError
 
 
+def _always_readable_fd(owner):
+    """An fd that select() always reports ready.
+
+    connection.py select()s on the socket before recv (WSL2 compat, ecd41a3),
+    so a socket double must expose a real descriptor or select raises
+    TypeError. A socketpair with a byte already in the pipe is always ready,
+    which hands control straight back to the double's own recv().
+    """
+    rd, wr = socket.socketpair()
+    wr.sendall(b"\x00")
+    owner._fd_pair = (rd, wr)          # keep alive for the object's lifetime
+    return rd.fileno()
+
+
 class BlockingFakeSocket:
     def __init__(self):
+        self._readable_fd = _always_readable_fd(self)
         self.first_send_started = threading.Event()
         self.release_first_send = threading.Event()
         self.first_send = True
@@ -20,6 +36,13 @@ class BlockingFakeSocket:
         self._sending = False
         self._responses = []
         self.sent_payloads = []
+
+    def fileno(self):
+        # connection.py select()s on the socket (WSL2 compat, ecd41a3), and
+        # select.select requires a real file descriptor. Hand it one from a
+        # throwaway socketpair that is always readable, so select returns
+        # immediately and the double's own recv() drives the test.
+        return self._readable_fd
 
     def settimeout(self, timeout):
         self.timeout = timeout
@@ -58,10 +81,18 @@ class BlockingFakeSocket:
 
 class ScriptedFakeSocket:
     def __init__(self, response_builder):
+        self._readable_fd = _always_readable_fd(self)
         self._response_builder = response_builder
         self._responses = []
         self.sent_payloads = []
         self.closed = False
+
+    def fileno(self):
+        # connection.py select()s on the socket (WSL2 compat, ecd41a3), and
+        # select.select requires a real file descriptor. Hand it one from a
+        # throwaway socketpair that is always readable, so select returns
+        # immediately and the double's own recv() drives the test.
+        return self._readable_fd
 
     def settimeout(self, timeout):
         self.timeout = timeout
