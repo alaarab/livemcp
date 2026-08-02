@@ -505,6 +505,7 @@ Three design choices matter most:
 ## Design Notes
 
 - Native Max for Live support proposal: [docs/native-max-for-live-support.md](docs/native-max-for-live-support.md)
+- Flagship plugin QA workflow (screenshot evidence you can trust): [docs/plugin-qa-workflow.md](docs/plugin-qa-workflow.md)
 
 ## Developing LiveMCP
 
