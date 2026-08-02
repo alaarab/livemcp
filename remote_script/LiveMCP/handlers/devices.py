@@ -193,8 +193,17 @@ def set_device_parameter(control_surface, params):
         raise ValueError("Missing required parameter: value")
     value = float(value)
 
-    param_index = params.get("parameter_index") or params.get("param_index")
-    param_name = params.get("parameter_name") or params.get("param_name")
+    # Explicit None checks, not `or`: parameter_index 0 is VALID and falsy, and
+    # index 0 is "Device On" on every Live device — with `or` the fallback ate
+    # it and bypassing any device by index raised "Must provide either
+    # param_index or param_name". (Same zero-is-falsy rule as the mixer
+    # handlers; see CLAUDE.md Findings.)
+    param_index = params.get("parameter_index")
+    if param_index is None:
+        param_index = params.get("param_index")
+    param_name = params.get("parameter_name")
+    if param_name is None:
+        param_name = params.get("param_name")
 
     if param_index is not None:
         param_index = int(param_index)
