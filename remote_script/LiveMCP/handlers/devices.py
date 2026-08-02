@@ -743,7 +743,22 @@ def move_device(control_surface, params):
 
 
 def enable_device(control_surface, params):
-    """Enable or disable a device on a track."""
+    """Enable or disable a device on a track.
+
+    Toggles the device's **"Device On" parameter** (always index 0 on every Live
+    device), which is the only writable route to the bypass state.
+
+    This used to assign ``device.is_enabled``. That attribute is NOT in the Live
+    Object Model — the LOM exposes ``Device.is_active``, and it is get-only — so
+    the assignment silently bound a throwaway Python attribute and the device
+    never changed. The old return then echoed the REQUESTED value, so the tool
+    reported ``is_enabled: false`` on a device that was still fully on. Found
+    2026-08-01 while trying to Live-verify a bypass-dim gate: the device would
+    not bypass, yet every call claimed success.
+
+    The return now reports what the device ACTUALLY is, read back after the
+    write, so a failure surfaces instead of being papered over.
+    """
     song = control_surface.song()
     track, device = _get_device(song, params)
     enabled = params.get("enabled")
@@ -751,12 +766,20 @@ def enable_device(control_surface, params):
         raise ValueError("Missing required parameter: enabled")
     enabled = bool(enabled)
     device_name = device.name
-    device.is_enabled = enabled
+
+    if not len(device.parameters):
+        raise ValueError(
+            "Device {0} exposes no parameters, so it has no Device On to "
+            "toggle".format(device_name))
+    device.parameters[0].value = 1.0 if enabled else 0.0
+
     return {
         "track_index": int(params["track_index"]),
         "device_index": int(params["device_index"]),
         "device_name": device_name,
-        "is_enabled": enabled,
+        # Read back, never echoed — see the docstring.
+        "is_enabled": bool(device.parameters[0].value),
+        "requested": enabled,
     }
 
 
