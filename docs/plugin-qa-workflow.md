@@ -165,6 +165,81 @@ subsequent drag into fine mode and looks like a broken control.
 
 ---
 
+## Keeping captures comparable
+
+A screenshot is only evidence if it can be compared to the last one. These
+constants have to hold across a whole shell phase, or you are measuring your
+capture setup rather than your design:
+
+- **Same window size.** Live reflows the device chain; a different window width
+  changes side-column widths and how dominant the graph looks.
+- **Same crop geometry.** Fix the crop rectangle and the upscale factor for the
+  phase. Judging "the side column got wider" against a differently-cropped
+  earlier shot is not possible.
+- **Same reference state.** If EQ Eight is in frame, it must be in the same
+  state — same band selected, same view mode — or the comparison drifts on the
+  reference side while you are reading the flagship side.
+
+## Tag every capture with its purpose
+
+Three passes answer three different questions, and mixing them wastes the
+capture:
+
+| Purpose | What it must show | What it is for |
+|---|---|---|
+| **Structure** | the whole device | layout, spacing, control grouping, mass balance |
+| **Material** | one tight region | typography, colour, borders, states |
+| **Interaction** | a control mid-gesture, or its parameter read-back | whether the thing actually works |
+
+Record the purpose in the filename. An untagged screenshot gets reused for a
+question it was never framed to answer.
+
+Also capture at least one **compact-chain** shot at the narrowest width the
+device is realistically used at — not just the comfortable wide view. Most
+layout defects only appear when the device is squeezed next to others.
+
+For a family judgement (both flagship EQs), take one capture with both in the
+same chain. Reviewing them in separate screenshots taken minutes apart hides
+exactly the inconsistencies a family comparison is meant to surface.
+
+## Canonical baselines
+
+For each shell phase, designate **one** accepted pair as canonical:
+
+- Update the canonical baseline **only** when a checkpoint is explicitly
+  accepted — never mid-iteration, or you lose the thing you were measuring
+  against.
+- Mark superseded pairs as such rather than deleting them; the trail is what
+  lets you tell progress from churn.
+- Write a **one-paragraph summary** with each accepted checkpoint: what
+  changed, what it fixed, what is still open. Six months on, the summary is
+  what makes the archive readable — the images alone are not.
+
+## When to treat a review as blocked
+
+Stop and re-capture rather than reasoning from the image, if **any** of these
+is true:
+
+- `confirm_validation_target` does not match the intended track/device
+- the device instance was not reloaded after the last build and freeze
+- the reference device is in a different state from the previous capture
+- the crop geometry or window size changed within the phase
+- you cannot tell whether the shot is structure, material or interaction
+
+A blocked review is cheap. A design decision made from a mislabelled or stale
+screenshot costs a whole iteration, and it is usually not discovered until
+something built on top of it behaves oddly.
+
+## Separate evidence passes from implementation passes
+
+Do not capture while mid-edit. An evidence pass has its own preconditions —
+built, frozen, reloaded, selection confirmed — and none of them hold reliably
+while files are changing. Finish the change, build and freeze, reload, then
+capture. Screenshots taken during implementation routinely show a half-applied
+state that nobody can reproduce afterwards.
+
+---
+
 ## Related
 
 - `get_livemcp_status()` — lower-level than `get_validation_readiness`; use it
