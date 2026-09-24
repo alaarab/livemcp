@@ -50,3 +50,8 @@ packages = ["src/livemcp"]
 
 [tool.ruff]
 line-length = 100
+
+[tool.pytest.ini_options]
+markers = [
+    "live_bridge: integration tests that require a running Ableton LiveMCP remote script",
+]

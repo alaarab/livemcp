@@ -543,6 +543,9 @@ uv sync --group dev
 # Unit tests
 uv run python -m unittest discover -s tests -v
 
+# Live bridge integration tests (requires Ableton + the LiveMCP remote script)
+LIVEMCP_RUN_LIVE_TESTS=1 uv run pytest tests/live -v
+
 # Lint
 uv run ruff check src tests
 
@@ -557,6 +560,13 @@ For the local dev loop on macOS, the useful rhythm is:
 3. `uv run livemcp --restart-ableton`
 4. test against the running Live instance
 5. `bash scripts/publish.sh --dry-run` before cutting a release
+
+The live integration tier is opt-in because it controls the running Ableton UI.
+It verifies dialog dispatch without pressing a real button, switches between
+Session and Arrangement views and restores the original view, and selects a
+device before restoring the original selection. See
+[`tests/live/README.md`](tests/live/README.md) for prerequisites and safety
+details.
 
 ### Project Structure
 
