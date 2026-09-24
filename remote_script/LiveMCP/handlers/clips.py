@@ -634,6 +634,7 @@ def insert_clip_envelope_step(control_surface, params):
     time = params.get("time")
     value = params.get("value")
     curve = params.get("curve", 0.0)
+    length = float(params.get("length", 0.25))
 
     if device_index is None:
         raise ValueError("Missing required parameter: device_index")
@@ -660,6 +661,10 @@ def insert_clip_envelope_step(control_surface, params):
 
     param = device.parameters[param_index]
     envelope = clip.automation_envelope(param)
+    # automation_envelope only returns an envelope that already exists; a
+    # parameter that has never been automated in this clip needs one created.
+    if envelope is None and hasattr(clip, "create_automation_envelope"):
+        envelope = clip.create_automation_envelope(param)
 
     if envelope is None:
         raise ValueError(
@@ -667,7 +672,10 @@ def insert_clip_envelope_step(control_surface, params):
             "This may be an Arrangement clip or a parameter from another track.".format(param.name)
         )
 
-    envelope.insert_step(time, value, curve)
+    # LOM signature is insert_step(start_time, step_length, value): a step of
+    # `length` beats holding `value`. (It was called as (time, value, curve),
+    # which made the value the step length and wrote 0 into every step.)
+    envelope.insert_step(time, length, value)
     return {
         "track_index": track_index,
         "clip_index": int(params["clip_index"]),
@@ -676,6 +684,7 @@ def insert_clip_envelope_step(control_surface, params):
         "param_name": param.name,
         "time": time,
         "value": value,
+        "length": length,
         "curve": curve,
         "inserted": True,
     }
