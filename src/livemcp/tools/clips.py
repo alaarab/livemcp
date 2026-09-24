@@ -455,11 +455,13 @@ def insert_clip_envelope_step(
     param_index: int,
     time: float,
     value: float,
+    length: float = 0.25,
     curve: float = 0.0,
 ) -> str:
-    """Insert an automation breakpoint into a clip's parameter envelope.
+    """Insert an automation step into a clip's parameter envelope.
 
-    Writes a single automation point at the given time with the given value.
+    Writes a step of `length` beats holding `value`, starting at `time` (this is
+    Live's insert_step: a held segment, not a single breakpoint).
     Creates the envelope if it does not exist yet. Only works for Session clips.
     Note: Arrangement clips will return an error.
 
@@ -469,7 +471,8 @@ def insert_clip_envelope_step(
         device_index: Zero-based index of the device on the track.
         param_index: Zero-based index of the parameter on the device.
         time: Time position in beats to insert the automation point.
-        value: Automation value to set at the given time.
+        value: Automation value the step holds (parameter units).
+        length: Step length in beats (default 0.25).
         curve: Curve shape (0.0 = linear, default 0.0).
     """
     result = get_connection().send_command("insert_clip_envelope_step", {
@@ -479,6 +482,7 @@ def insert_clip_envelope_step(
         "param_index": param_index,
         "time": time,
         "value": value,
+        "length": length,
         "curve": curve,
     })
     return json.dumps(result)
