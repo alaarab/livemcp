@@ -23,5 +23,7 @@ The intended v1 flow is:
 Security boundaries:
 
 - The bridge only binds to `127.0.0.1`.
+- Every request carries bridge protocol version `1` and a required request id;
+  responses without the matching id are rejected by the remote-script client.
 - No command accepts arbitrary code execution.
 - Mutations are limited to an allowlisted patcher-editing surface.

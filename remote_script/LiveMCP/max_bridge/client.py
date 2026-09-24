@@ -11,6 +11,7 @@ PORT = 9881
 RECV_SIZE = 8192
 TIMEOUT = 5.0
 MESSAGE_TERMINATOR = b"\n"
+BRIDGE_PROTOCOL_VERSION = 1
 
 
 class MaxBridgeClient:
@@ -47,7 +48,7 @@ class MaxBridgeClient:
     @staticmethod
     def _ids_match(expected_id, response_id):
         if response_id is None:
-            return True
+            return False
         return str(response_id) == str(expected_id)
 
     def send_command(self, command_type, params=None):
@@ -57,7 +58,12 @@ class MaxBridgeClient:
 
         request_id = self._next_request_id()
         payload = json.dumps(
-            {"id": request_id, "type": command_type, "params": params}
+            {
+                "id": request_id,
+                "protocol_version": BRIDGE_PROTOCOL_VERSION,
+                "type": command_type,
+                "params": params,
+            }
         ).encode("utf-8") + MESSAGE_TERMINATOR
 
         try:
@@ -93,6 +99,12 @@ class MaxBridgeClient:
                 "Max bridge returned invalid JSON.",
                 {"error": str(exc)},
             )
+        if not isinstance(response, dict):
+            raise LiveMCPError(
+                "max/protocol-error",
+                "Max bridge response must be a JSON object.",
+                {"response_type": type(response).__name__},
+            )
 
         response_id = response.get("id")
         if not self._ids_match(request_id, response_id):
@@ -111,6 +123,16 @@ class MaxBridgeClient:
         """Return bridge capability metadata or a structured unavailable payload."""
         try:
             result = self.send_command("get_max_bridge_info", {})
+            protocol_version = result.get("protocol_version")
+            if protocol_version != BRIDGE_PROTOCOL_VERSION:
+                raise LiveMCPError(
+                    "max/protocol-version-mismatch",
+                    "Max bridge protocol version is not supported.",
+                    {
+                        "expected_version": BRIDGE_PROTOCOL_VERSION,
+                        "received_version": protocol_version,
+                    },
+                )
             result.setdefault("reachable", True)
             result.setdefault("transport", "tcp-json-lines")
             result.setdefault("host", self._host)
