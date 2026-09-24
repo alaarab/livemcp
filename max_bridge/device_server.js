@@ -67,6 +67,17 @@ function validateRequest(payload) {
   if (payload.id === undefined || payload.id === null) {
     return failure(null, "max/invalid-request", "Request must include an id.", {});
   }
+  if (payload.protocol_version !== BRIDGE_PROTOCOL_VERSION) {
+    return failure(
+      payload.id,
+      "max/protocol-version-mismatch",
+      "Unsupported Max bridge protocol version.",
+      {
+        expected_version: BRIDGE_PROTOCOL_VERSION,
+        received_version: payload.protocol_version,
+      }
+    );
+  }
   if (typeof payload.type !== "string" || !payload.type.length) {
     return failure(payload.id, "max/invalid-request", "Request must include a type.", {});
   }
