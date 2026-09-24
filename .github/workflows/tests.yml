@@ -45,7 +45,8 @@ jobs:
         run: uv sync --group dev
       # No Ableton on a runner: these are unit tests over socket doubles, the
       # tool registry, the installer and packaging. Anything needing a live
-      # Live session belongs in the bridge-gated tier, not here.
+      # Live session is collected but skipped unless LIVEMCP_RUN_LIVE_TESTS=1.
+      # Run tests/live on a machine with Ableton for the bridge-gated tier.
       - name: Pytest
         run: uv run pytest tests -q
 
