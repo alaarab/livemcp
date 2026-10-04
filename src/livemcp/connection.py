@@ -41,7 +41,9 @@ class AbletonConnection:
     @staticmethod
     def _build_payload(command_type: str, params: dict, request_id: int) -> bytes:
         """Encode a framed command payload."""
-        return json.dumps({"id": request_id, "type": command_type, "params": params}).encode("utf-8")
+        return json.dumps({"id": request_id, "type": command_type, "params": params}).encode(
+            "utf-8"
+        )
 
     def _open_socket(self):
         """Create and connect a fresh TCP socket."""
@@ -52,6 +54,8 @@ class AbletonConnection:
 
     def _send_payload_unlocked(self, payload: bytes, expected_request_id: int) -> dict:
         """Send a framed payload and return the decoded response."""
+        if self._socket is None:
+            raise ConnectionError("Not connected to Ableton")
         self._socket.sendall(payload + MESSAGE_TERMINATOR)
         self._socket.settimeout(TIMEOUT)
 

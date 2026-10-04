@@ -24,7 +24,7 @@ classifiers = [
     "Topic :: Software Development :: Libraries",
 ]
 dependencies = [
-    "mcp[cli]>=1.30.0,<2",
+    "mcp[cli]>=2.3.0",
 ]
 
 [project.scripts]
@@ -39,6 +39,7 @@ Repository = "https://github.com/alaarab/livemcp"
 dev = [
     "ruff>=0.16.10",
     "pytest>=9.1.1",
+    "ty>=0.0.84",
 ]
 
 [tool.hatchling.build]

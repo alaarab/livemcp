@@ -12,9 +12,12 @@ def get_browser_tree(category_type: str = "all") -> str:
         category_type: Filter by type — 'all', 'instruments', 'sounds', 'drums',
                        'audio_effects', or 'midi_effects'.
     """
-    result = get_connection().send_command("get_browser_tree", {
-        "category_type": category_type,
-    })
+    result = get_connection().send_command(
+        "get_browser_tree",
+        {
+            "category_type": category_type,
+        },
+    )
     return json.dumps(result)
 
 
@@ -39,10 +42,13 @@ def load_instrument_or_effect(track_index: int, uri: str) -> str:
         track_index: Zero-based index of the target track.
         uri: The browser URI of the instrument or effect to load.
     """
-    result = get_connection().send_command("load_browser_item", {
-        "track_index": track_index,
-        "item_uri": uri,
-    })
+    result = get_connection().send_command(
+        "load_browser_item",
+        {
+            "track_index": track_index,
+            "item_uri": uri,
+        },
+    )
     return json.dumps(result)
 
 
@@ -54,11 +60,14 @@ def load_drum_kit(track_index: int, rack_uri: str, kit_path: str) -> str:
         rack_uri: URI of the drum rack to load.
         kit_path: Path to the drum kit inside the browser (e.g. 'drums/acoustic/kit1').
     """
-    result = get_connection().send_command("load_drum_kit", {
-        "track_index": track_index,
-        "rack_uri": rack_uri,
-        "kit_path": kit_path,
-    })
+    result = get_connection().send_command(
+        "load_drum_kit",
+        {
+            "track_index": track_index,
+            "rack_uri": rack_uri,
+            "kit_path": kit_path,
+        },
+    )
     return json.dumps(result)
 
 
@@ -71,10 +80,13 @@ def get_device_parameters(track_index: int, device_index: int) -> str:
         track_index: Zero-based index of the track.
         device_index: Zero-based index of the device in the track's device chain.
     """
-    result = get_connection().send_command("get_device_parameters", {
-        "track_index": track_index,
-        "device_index": device_index,
-    })
+    result = get_connection().send_command(
+        "get_device_parameters",
+        {
+            "track_index": track_index,
+            "device_index": device_index,
+        },
+    )
     return json.dumps(result)
 
 
@@ -91,12 +103,15 @@ def set_device_parameter(
         parameter_index: Zero-based index of the parameter.
         value: New value for the parameter (must be within the parameter's min/max range).
     """
-    result = get_connection().send_command("set_device_parameter", {
-        "track_index": track_index,
-        "device_index": device_index,
-        "parameter_index": parameter_index,
-        "value": value,
-    })
+    result = get_connection().send_command(
+        "set_device_parameter",
+        {
+            "track_index": track_index,
+            "device_index": device_index,
+            "parameter_index": parameter_index,
+            "value": value,
+        },
+    )
     return json.dumps(result)
 
 
@@ -115,9 +130,12 @@ def get_return_track_devices(return_index: int) -> str:
     Args:
         return_index: Zero-based index of the return track.
     """
-    result = get_connection().send_command("get_return_track_devices", {
-        "return_index": return_index,
-    })
+    result = get_connection().send_command(
+        "get_return_track_devices",
+        {
+            "return_index": return_index,
+        },
+    )
     return json.dumps(result)
 
 
@@ -127,9 +145,12 @@ def get_master_device_parameters(device_index: int) -> str:
     Args:
         device_index: Zero-based index of the device in the master track's device chain.
     """
-    result = get_connection().send_command("get_master_device_parameters", {
-        "device_index": device_index,
-    })
+    result = get_connection().send_command(
+        "get_master_device_parameters",
+        {
+            "device_index": device_index,
+        },
+    )
     return json.dumps(result)
 
 
@@ -140,10 +161,13 @@ def get_return_device_parameters(return_index: int, device_index: int) -> str:
         return_index: Zero-based index of the return track.
         device_index: Zero-based index of the device in the return track's device chain.
     """
-    result = get_connection().send_command("get_return_device_parameters", {
-        "return_index": return_index,
-        "device_index": device_index,
-    })
+    result = get_connection().send_command(
+        "get_return_device_parameters",
+        {
+            "return_index": return_index,
+            "device_index": device_index,
+        },
+    )
     return json.dumps(result)
 
 
@@ -157,10 +181,13 @@ def get_device_display_values(track_index: int, device_index: int) -> str:
         track_index: Zero-based index of the track.
         device_index: Zero-based index of the device in the track's device chain.
     """
-    result = get_connection().send_command("get_device_display_values", {
-        "track_index": track_index,
-        "device_index": device_index,
-    })
+    result = get_connection().send_command(
+        "get_device_display_values",
+        {
+            "track_index": track_index,
+            "device_index": device_index,
+        },
+    )
     return json.dumps(result)
 
 
@@ -174,10 +201,13 @@ def get_rack_chains(track_index: int, device_index: int) -> str:
         track_index: Zero-based index of the track.
         device_index: Zero-based index of the rack device.
     """
-    result = get_connection().send_command("get_rack_chains", {
-        "track_index": track_index,
-        "device_index": device_index,
-    })
+    result = get_connection().send_command(
+        "get_rack_chains",
+        {
+            "track_index": track_index,
+            "device_index": device_index,
+        },
+    )
     return json.dumps(result)
 
 
@@ -187,7 +217,7 @@ def set_chain_mixer_value(
     chain_index: int,
     parameter_name: str,
     value: float,
-    send_index: int = None,
+    send_index: int | None = None,
 ) -> str:
     """Set a rack chain mixer parameter.
 
@@ -221,10 +251,13 @@ def get_drum_chains(track_index: int, device_index: int) -> str:
         track_index: Zero-based index of the track.
         device_index: Zero-based index of the drum rack device.
     """
-    result = get_connection().send_command("get_drum_chains", {
-        "track_index": track_index,
-        "device_index": device_index,
-    })
+    result = get_connection().send_command(
+        "get_drum_chains",
+        {
+            "track_index": track_index,
+            "device_index": device_index,
+        },
+    )
     return json.dumps(result)
 
 
@@ -244,13 +277,16 @@ def set_drum_chain_property(
         property_name: One of 'in_note', 'out_note', or 'choke_group'.
         value: Integer value for the target property.
     """
-    result = get_connection().send_command("set_drum_chain_property", {
-        "track_index": track_index,
-        "device_index": device_index,
-        "chain_index": chain_index,
-        "property_name": property_name,
-        "value": value,
-    })
+    result = get_connection().send_command(
+        "set_drum_chain_property",
+        {
+            "track_index": track_index,
+            "device_index": device_index,
+            "chain_index": chain_index,
+            "property_name": property_name,
+            "value": value,
+        },
+    )
     return json.dumps(result)
 
 
@@ -263,10 +299,13 @@ def get_drum_pads(track_index: int, device_index: int) -> str:
         track_index: Zero-based index of the track.
         device_index: Zero-based index of the drum rack device.
     """
-    result = get_connection().send_command("get_drum_pads", {
-        "track_index": track_index,
-        "device_index": device_index,
-    })
+    result = get_connection().send_command(
+        "get_drum_pads",
+        {
+            "track_index": track_index,
+            "device_index": device_index,
+        },
+    )
     return json.dumps(result)
 
 
@@ -277,10 +316,13 @@ def delete_device(track_index: int, device_index: int) -> str:
         track_index: Zero-based index of the track.
         device_index: Zero-based index of the device to delete.
     """
-    result = get_connection().send_command("delete_device", {
-        "track_index": track_index,
-        "device_index": device_index,
-    })
+    result = get_connection().send_command(
+        "delete_device",
+        {
+            "track_index": track_index,
+            "device_index": device_index,
+        },
+    )
     return json.dumps(result)
 
 
@@ -292,9 +334,12 @@ def load_device_on_master(uri: str) -> str:
     Args:
         uri: The browser URI of the instrument or effect to load.
     """
-    result = get_connection().send_command("load_device_on_master", {
-        "uri": uri,
-    })
+    result = get_connection().send_command(
+        "load_device_on_master",
+        {
+            "uri": uri,
+        },
+    )
     return json.dumps(result)
 
 
@@ -307,10 +352,13 @@ def load_device_on_return(return_index: int, uri: str) -> str:
         return_index: Zero-based index of the return track.
         uri: The browser URI of the instrument or effect to load.
     """
-    result = get_connection().send_command("load_device_on_return", {
-        "return_index": return_index,
-        "uri": uri,
-    })
+    result = get_connection().send_command(
+        "load_device_on_return",
+        {
+            "return_index": return_index,
+            "uri": uri,
+        },
+    )
     return json.dumps(result)
 
 
@@ -324,11 +372,14 @@ def set_master_device_parameter(device_index: int, parameter_index: int, value: 
         parameter_index: Zero-based index of the parameter.
         value: New value for the parameter (must be within the parameter's min/max range).
     """
-    result = get_connection().send_command("set_master_device_parameter", {
-        "device_index": device_index,
-        "parameter_index": parameter_index,
-        "value": value,
-    })
+    result = get_connection().send_command(
+        "set_master_device_parameter",
+        {
+            "device_index": device_index,
+            "parameter_index": parameter_index,
+            "value": value,
+        },
+    )
     return json.dumps(result)
 
 
@@ -345,12 +396,15 @@ def set_return_device_parameter(
         parameter_index: Zero-based index of the parameter.
         value: New value for the parameter (must be within the parameter's min/max range).
     """
-    result = get_connection().send_command("set_return_device_parameter", {
-        "return_index": return_index,
-        "device_index": device_index,
-        "parameter_index": parameter_index,
-        "value": value,
-    })
+    result = get_connection().send_command(
+        "set_return_device_parameter",
+        {
+            "return_index": return_index,
+            "device_index": device_index,
+            "parameter_index": parameter_index,
+            "value": value,
+        },
+    )
     return json.dumps(result)
 
 
@@ -363,12 +417,15 @@ def set_drum_pad_mute(track_index: int, device_index: int, pad_index: int, mute:
         pad_index: MIDI note number of the drum pad (0-127).
         mute: True to mute the pad, False to unmute.
     """
-    result = get_connection().send_command("set_drum_pad_mute", {
-        "track_index": track_index,
-        "device_index": device_index,
-        "pad_index": pad_index,
-        "mute": mute,
-    })
+    result = get_connection().send_command(
+        "set_drum_pad_mute",
+        {
+            "track_index": track_index,
+            "device_index": device_index,
+            "pad_index": pad_index,
+            "mute": mute,
+        },
+    )
     return json.dumps(result)
 
 
@@ -381,12 +438,15 @@ def set_drum_pad_solo(track_index: int, device_index: int, pad_index: int, solo:
         pad_index: MIDI note number of the drum pad (0-127).
         solo: True to solo the pad, False to unsolo.
     """
-    result = get_connection().send_command("set_drum_pad_solo", {
-        "track_index": track_index,
-        "device_index": device_index,
-        "pad_index": pad_index,
-        "solo": solo,
-    })
+    result = get_connection().send_command(
+        "set_drum_pad_solo",
+        {
+            "track_index": track_index,
+            "device_index": device_index,
+            "pad_index": pad_index,
+            "solo": solo,
+        },
+    )
     return json.dumps(result)
 
 
@@ -396,9 +456,12 @@ def delete_master_device(device_index: int) -> str:
     Args:
         device_index: Zero-based index of the device to delete.
     """
-    result = get_connection().send_command("delete_master_device", {
-        "device_index": device_index,
-    })
+    result = get_connection().send_command(
+        "delete_master_device",
+        {
+            "device_index": device_index,
+        },
+    )
     return json.dumps(result)
 
 
@@ -409,10 +472,13 @@ def delete_return_device(return_index: int, device_index: int) -> str:
         return_index: Zero-based index of the return track.
         device_index: Zero-based index of the device to delete.
     """
-    result = get_connection().send_command("delete_return_device", {
-        "return_index": return_index,
-        "device_index": device_index,
-    })
+    result = get_connection().send_command(
+        "delete_return_device",
+        {
+            "return_index": return_index,
+            "device_index": device_index,
+        },
+    )
     return json.dumps(result)
 
 
@@ -424,11 +490,14 @@ def move_device(track_index: int, device_index: int, new_index: int) -> str:
         device_index: Zero-based index of the device to move.
         new_index: Zero-based target position in the device chain.
     """
-    result = get_connection().send_command("move_device", {
-        "track_index": track_index,
-        "device_index": device_index,
-        "new_index": new_index,
-    })
+    result = get_connection().send_command(
+        "move_device",
+        {
+            "track_index": track_index,
+            "device_index": device_index,
+            "new_index": new_index,
+        },
+    )
     return json.dumps(result)
 
 
@@ -440,11 +509,14 @@ def enable_device(track_index: int, device_index: int, enabled: bool) -> str:
         device_index: Zero-based index of the device.
         enabled: True to enable the device, False to disable it.
     """
-    result = get_connection().send_command("enable_device", {
-        "track_index": track_index,
-        "device_index": device_index,
-        "enabled": enabled,
-    })
+    result = get_connection().send_command(
+        "enable_device",
+        {
+            "track_index": track_index,
+            "device_index": device_index,
+            "enabled": enabled,
+        },
+    )
     return json.dumps(result)
 
 

@@ -28,6 +28,6 @@ def error_from_payload(error_payload: Any) -> RuntimeError:
         return RemoteCommandError(message, code=code, details=details)
 
     if error_payload is None:
-        return RuntimeError("Unknown error")
+        return RemoteCommandError("Unknown error")
 
-    return RuntimeError(str(error_payload))
+    return RemoteCommandError(str(error_payload))

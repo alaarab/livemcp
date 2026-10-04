@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import cast, Any
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server import MCPServer
+from mcp.server.mcpserver.exceptions import ResourceError
 
 from .docs import DocsIndex
+from .mcp_handlers import mcp_handler
 from .connection import get_connection
 from .tools import session
 from .tools import max as max_tools
@@ -17,7 +19,10 @@ def _read_track_info(track_index: int) -> dict[str, Any]:
 
 
 def _read_scene_info(scene_index: int) -> session.SceneInfo:
-    return get_connection().send_command("get_scene_info", {"scene_index": scene_index})
+    return cast(
+        session.SceneInfo,
+        get_connection().send_command("get_scene_info", {"scene_index": scene_index}),
+    )
 
 
 def _read_scene_clips(scene_index: int) -> dict[str, Any]:
@@ -49,18 +54,20 @@ def _read_max_status() -> dict[str, Any]:
         "remote_reachable": status.get("remote_reachable", False),
         "remote_error": status.get("remote_error"),
         "max_bridge": status.get("max_bridge"),
-        "warnings": [
-            warning
-            for warning in status.get("warnings", [])
-            if "max" in warning.lower()
-        ],
+        "warnings": [warning for warning in status.get("warnings", []) if "max" in warning.lower()],
     }
 
 
-def register_resources(mcp: FastMCP) -> None:
+def register_resources(mcp: MCPServer) -> None:
     """Register the controller-oriented MCP resources."""
 
-    @mcp.resource(
+    def resource(*args, **kwargs):
+        def register(fn):
+            return mcp.resource(*args, **kwargs)(mcp_handler(fn, ResourceError))
+
+        return register
+
+    @resource(
         "live://status",
         name="livemcp_status_resource",
         title="LiveMCP Status",
@@ -70,7 +77,7 @@ def register_resources(mcp: FastMCP) -> None:
     def livemcp_status() -> session.LiveMCPStatus:
         return session.get_livemcp_status()
 
-    @mcp.resource(
+    @resource(
         "live://session/current",
         name="current_session_resource",
         title="Current Session",
@@ -80,7 +87,7 @@ def register_resources(mcp: FastMCP) -> None:
     def current_session() -> session.SessionInfo:
         return session.get_session_info()
 
-    @mcp.resource(
+    @resource(
         "live://song/time",
         name="song_time_resource",
         title="Song Time",
@@ -90,7 +97,7 @@ def register_resources(mcp: FastMCP) -> None:
     def song_time() -> session.SongTimeInfo:
         return session.get_song_time()
 
-    @mcp.resource(
+    @resource(
         "live://view/current",
         name="current_view_resource",
         title="Current View",
@@ -100,7 +107,7 @@ def register_resources(mcp: FastMCP) -> None:
     def current_view() -> session.ViewStateInfo:
         return session.get_view_state()
 
-    @mcp.resource(
+    @resource(
         "live://selection/track",
         name="selected_track_resource",
         title="Selected Track",
@@ -110,7 +117,7 @@ def register_resources(mcp: FastMCP) -> None:
     def selected_track() -> session.SelectedTrackInfo:
         return session.get_selected_track()
 
-    @mcp.resource(
+    @resource(
         "live://selection/scene",
         name="selected_scene_resource",
         title="Selected Scene",
@@ -120,7 +127,7 @@ def register_resources(mcp: FastMCP) -> None:
     def selected_scene() -> session.SelectedSceneInfo:
         return session.get_selected_scene()
 
-    @mcp.resource(
+    @resource(
         "live://selection/device",
         name="selected_device_resource",
         title="Selected Device",
@@ -130,7 +137,7 @@ def register_resources(mcp: FastMCP) -> None:
     def selected_device() -> session.SelectedDeviceInfo:
         return session.get_selected_device()
 
-    @mcp.resource(
+    @resource(
         "live://application/dialog",
         name="application_dialog_resource",
         title="Application Dialog",
@@ -140,7 +147,7 @@ def register_resources(mcp: FastMCP) -> None:
     def application_dialog() -> session.ApplicationDialogInfo:
         return session.get_application_dialog()
 
-    @mcp.resource(
+    @resource(
         "max://status",
         name="max_status_resource",
         title="Max Bridge Status",
@@ -150,7 +157,7 @@ def register_resources(mcp: FastMCP) -> None:
     def max_status() -> dict[str, Any]:
         return _read_max_status()
 
-    @mcp.resource(
+    @resource(
         "max://selected-device",
         name="max_selected_device_resource",
         title="Selected Max Device",
@@ -160,7 +167,7 @@ def register_resources(mcp: FastMCP) -> None:
     def max_selected_device() -> max_tools.SelectedMaxDeviceInfo:
         return max_tools.get_selected_max_device()
 
-    @mcp.resource(
+    @resource(
         "max://patcher/current",
         name="max_current_patcher_resource",
         title="Current Max Patcher",
@@ -170,7 +177,7 @@ def register_resources(mcp: FastMCP) -> None:
     def max_current_patcher() -> max_tools.CurrentPatcherInfo:
         return max_tools.get_current_patcher()
 
-    @mcp.resource(
+    @resource(
         "live://track/{track_index}",
         name="track_resource",
         title="Track",
@@ -180,7 +187,7 @@ def register_resources(mcp: FastMCP) -> None:
     def track(track_index: int) -> dict[str, Any]:
         return _read_track_info(track_index)
 
-    @mcp.resource(
+    @resource(
         "live://scene/{scene_index}",
         name="scene_resource",
         title="Scene",
@@ -190,7 +197,7 @@ def register_resources(mcp: FastMCP) -> None:
     def scene(scene_index: int) -> session.SceneInfo:
         return _read_scene_info(scene_index)
 
-    @mcp.resource(
+    @resource(
         "live://scene/{scene_index}/clips",
         name="scene_clips_resource",
         title="Scene Clips",
@@ -200,7 +207,7 @@ def register_resources(mcp: FastMCP) -> None:
     def scene_clips(scene_index: int) -> dict[str, Any]:
         return _read_scene_clips(scene_index)
 
-    @mcp.resource(
+    @resource(
         "live://device/{track_index}/{device_index}",
         name="device_resource",
         title="Device",
@@ -210,7 +217,7 @@ def register_resources(mcp: FastMCP) -> None:
     def device(track_index: int, device_index: int) -> dict[str, Any]:
         return _read_device_display_values(track_index, device_index)
 
-    @mcp.resource(
+    @resource(
         "docs://status",
         name="docs_status_resource",
         title="Docs Status",
@@ -220,7 +227,7 @@ def register_resources(mcp: FastMCP) -> None:
     def docs_status() -> dict[str, Any]:
         return _read_docs_status()
 
-    @mcp.resource(
+    @resource(
         "docs://chunk/{chunk_id}",
         name="docs_chunk_resource",
         title="Docs Chunk",
@@ -230,7 +237,7 @@ def register_resources(mcp: FastMCP) -> None:
     def docs_chunk(chunk_id: int) -> dict[str, Any]:
         return _read_docs_chunk(chunk_id)
 
-    @mcp.resource(
+    @resource(
         "docs://page/{page_id}",
         name="docs_page_resource",
         title="Docs Page",
