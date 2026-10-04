@@ -127,7 +127,7 @@ class _HtmlDocumentParser(HTMLParser):
             return
         self._text_parts.append(data)
 
-    def close(self) -> ParsedDocument:
+    def document(self) -> ParsedDocument:
         super().close()
         self._flush_text()
         current_heading: str | None = None
@@ -172,12 +172,14 @@ def _normalize_url(base_url: str, href: str) -> str | None:
 def _parse_document(html: str, url: str) -> ParsedDocument:
     parser = _HtmlDocumentParser()
     parser.feed(html)
-    parsed = parser.close()
+    parsed = parser.document()
     title = parsed.title or url
     return ParsedDocument(title=title, blocks=parsed.blocks, links=parsed.links)
 
 
-def _chunk_blocks(blocks: Iterable[tuple[str | None, str]], max_chars: int = 1600) -> list[dict[str, str]]:
+def _chunk_blocks(
+    blocks: Iterable[tuple[str | None, str]], max_chars: int = 1600
+) -> list[dict[str, str]]:
     chunks: list[dict[str, str]] = []
     buffer: list[str] = []
     active_heading: str | None = None

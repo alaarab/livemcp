@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from typing import TypedDict
+from typing import cast, TypedDict
 
 from ..docs import DocsIndex
 
@@ -30,7 +30,7 @@ class DocsStatusInfo(TypedDict, total=False):
 
 def get_docs_status() -> DocsStatusInfo:
     """Get local docs index status and configured sources."""
-    return DocsIndex().get_status()
+    return cast(DocsStatusInfo, DocsIndex().get_status())
 
 
 def search_docs(query: str, source_id: str = "all", limit: int = 8) -> str:
