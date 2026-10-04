@@ -1,15 +1,17 @@
-"""LiveMCP — FastMCP server that exposes Ableton Live tools over MCP."""
+"""LiveMCP — MCP server that exposes Ableton Live tools over MCP."""
 
 import argparse
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server import MCPServer
+from mcp.server.mcpserver.exceptions import ToolError
 
 from .docs import DOC_SOURCES, DocsIndex, sync_docs
 from .resources import register_resources
+from .mcp_handlers import mcp_handler
 from .tools import session, tracks, clips, devices, mixer, arrangement, grooves, docs
 from .tools import max as max_tools
 
-mcp = FastMCP(
+mcp = MCPServer(
     "LiveMCP",
     instructions=(
         "Control and inspect Ableton Live via MCP. Use live:// resources for status, "
@@ -20,6 +22,7 @@ mcp = FastMCP(
         "Ableton, not a composition agent."
     ),
 )
+
 
 def _collect_tools(*tool_groups):
     """Flatten tool groups and fail fast on duplicate MCP tool names."""
@@ -55,7 +58,7 @@ _all_tools = _collect_tools(
 )
 
 for _fn in _all_tools:
-    mcp.tool()(_fn)
+    mcp.tool()(mcp_handler(_fn, ToolError))
 
 register_resources(mcp)
 
@@ -64,8 +67,12 @@ def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="LiveMCP MCP server and Ableton helpers")
     actions = parser.add_mutually_exclusive_group()
     actions.add_argument("--install", action="store_true", help="Install the LiveMCP remote script")
-    actions.add_argument("--uninstall", action="store_true", help="Uninstall the LiveMCP remote script")
-    actions.add_argument("--install-status", action="store_true", help="Show remote-script install status")
+    actions.add_argument(
+        "--uninstall", action="store_true", help="Uninstall the LiveMCP remote script"
+    )
+    actions.add_argument(
+        "--install-status", action="store_true", help="Show remote-script install status"
+    )
     actions.add_argument(
         "--validation-readiness",
         action="store_true",
@@ -86,7 +93,9 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Show the LiveMCP Max bridge probe install status",
     )
-    actions.add_argument("--restart-ableton", action="store_true", help="Restart Ableton and wait for LiveMCP")
+    actions.add_argument(
+        "--restart-ableton", action="store_true", help="Restart Ableton and wait for LiveMCP"
+    )
     actions.add_argument("--launch-ableton", action="store_true", help="Launch Ableton")
     actions.add_argument("--quit-ableton", action="store_true", help="Quit Ableton")
     actions.add_argument(
@@ -148,9 +157,11 @@ def main(argv: list[str] | None = None):
     if args.docs_source and not args.sync_docs:
         parser.error("--docs-source can only be used with --sync-docs")
     if (
-        (args.track_index is not None or args.track_name or args.device_index is not None or args.device_name)
-        and not args.confirm_validation_target
-    ):
+        args.track_index is not None
+        or args.track_name
+        or args.device_index is not None
+        or args.device_name
+    ) and not args.confirm_validation_target:
         parser.error(
             "--track-index/--track-name/--device-index/--device-name can only be used with --confirm-validation-target"
         )

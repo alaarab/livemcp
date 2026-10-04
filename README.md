@@ -469,7 +469,7 @@ rather than falling back to GUI scripting.
                          │ MCP Protocol (stdio)
 ┌────────────────────────▼────────────────────────────────┐
 │                Package-Side MCP Server                   │
-│            src/livemcp/ (FastMCP)                        │
+│            src/livemcp/ (MCPServer)                      │
 │                                                          │
 │   220 tools + live://, max://, and docs:// resources     │
 │   structured controller state + action calls             │
@@ -497,7 +497,7 @@ rather than falling back to GUI scripting.
 
 Three design choices matter most:
 
-- **Thread safety** — reads happen on the socket thread; writes are scheduled onto Ableton's main thread so Live does not get mutated from the wrong place.
+- **Thread safety** — MCP 2 runs synchronous tools and resources on worker threads. A request lock serializes access to the shared Ableton socket. Inside Ableton, reads happen on the socket thread and writes are scheduled onto the main thread.
 - **Max bridge dispatch** — Max bridge commands stay on the socket thread because the actual patcher mutations happen inside the Max runtime; bouncing those calls through Ableton's main thread deadlocks editor/mutation requests.
 - **Single-source registration** — tool modules and handler registries fail fast on duplicate names instead of silently shadowing commands.
 - **Controller-first state model** — tools handle actions, and resources expose the current state a client usually wants to inspect before acting.
@@ -548,6 +548,7 @@ LIVEMCP_RUN_LIVE_TESTS=1 uv run pytest tests/live -v
 
 # Lint
 uv run ruff check src tests
+uv run ty check src/livemcp/
 
 # Tool registration sanity check (expected: 220)
 uv run python -c "from livemcp.server import mcp; print(len(mcp._tool_manager._tools), 'tools')"
@@ -573,7 +574,7 @@ details.
 ```
 livemcp/
 ├── src/livemcp/              # MCP server (pip/uvx installable)
-│   ├── server.py             # FastMCP app, registers all tool modules
+│   ├── server.py             # MCPServer app, registers all tool modules
 │   ├── connection.py         # TCP client to remote script
 │   ├── resources.py          # live:// MCP resources for controller state
 │   └── tools/                # 9 tool modules
