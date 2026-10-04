@@ -1,7 +1,7 @@
 """Max for Live tools: selected-device inspection and native patcher bridge control."""
 
 import json
-from typing import Any, Optional
+from typing import cast, Any, Optional
 
 from typing_extensions import TypedDict
 
@@ -98,7 +98,7 @@ def get_selected_max_device() -> SelectedMaxDeviceInfo:
     the active bridge session id when attached, and Max bridge capability state.
     """
     result = get_connection().send_command("get_selected_max_device", {})
-    return result
+    return cast(SelectedMaxDeviceInfo, result)
 
 
 def open_selected_device_in_max(bridge_session_id: Optional[str] = None) -> str:
@@ -113,7 +113,7 @@ def open_selected_device_in_max(bridge_session_id: Optional[str] = None) -> str:
 def get_current_patcher(bridge_session_id: Optional[str] = None) -> CurrentPatcherInfo:
     """Return summary metadata for the currently attached patcher."""
     result = get_connection().send_command("get_current_patcher", _bridge_params(bridge_session_id))
-    return result
+    return cast(CurrentPatcherInfo, result)
 
 
 def list_patcher_boxes(
@@ -130,7 +130,7 @@ def list_patcher_boxes(
     if named_only:
         params["named_only"] = True
     result = get_connection().send_command("list_patcher_boxes", params)
-    return result
+    return cast(PatcherBoxesInfo, result)
 
 
 def get_box_attrs(box_id: str, bridge_session_id: Optional[str] = None) -> BoxAttrsInfo:
@@ -138,7 +138,7 @@ def get_box_attrs(box_id: str, bridge_session_id: Optional[str] = None) -> BoxAt
     params = _bridge_params(bridge_session_id)
     params["box_id"] = box_id
     result = get_connection().send_command("get_box_attrs", params)
-    return result
+    return cast(BoxAttrsInfo, result)
 
 
 def set_box_attrs(

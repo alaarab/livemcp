@@ -1,7 +1,7 @@
 """Session-level tools: tempo, transport, time signature."""
 
 import json
-from typing import Any, Optional
+from typing import cast, Any, Optional
 
 from typing_extensions import TypedDict
 
@@ -257,7 +257,7 @@ def get_session_info() -> SessionInfo:
     master track info, playback state, and loop settings.
     """
     result = get_connection().send_command("get_session_info", {})
-    return result
+    return cast(SessionInfo, result)
 
 
 def get_song_time() -> SongTimeInfo:
@@ -266,7 +266,7 @@ def get_song_time() -> SongTimeInfo:
     Returns current_song_time (in beats), can_undo, and can_redo.
     """
     result = get_connection().send_command("get_song_time", {})
-    return result
+    return cast(SongTimeInfo, result)
 
 
 def get_cue_points() -> str:
@@ -319,10 +319,13 @@ def set_time_signature(numerator: int, denominator: int) -> str:
         numerator: Time signature numerator (e.g., 4 for 4/4).
         denominator: Time signature denominator (e.g., 4 for 4/4).
     """
-    result = get_connection().send_command("set_time_signature", {
-        "numerator": numerator,
-        "denominator": denominator,
-    })
+    result = get_connection().send_command(
+        "set_time_signature",
+        {
+            "numerator": numerator,
+            "denominator": denominator,
+        },
+    )
     return json.dumps(result)
 
 
@@ -478,7 +481,7 @@ def get_selected_track() -> SelectedTrackInfo:
     Returns the index, name, type, mute/solo/arm state, and color of the selected track.
     """
     result = get_connection().send_command("get_selected_track", {})
-    return result
+    return cast(SelectedTrackInfo, result)
 
 
 def set_selected_track(track_index: int) -> str:
@@ -497,7 +500,7 @@ def get_selected_scene() -> SelectedSceneInfo:
     Returns the index, name, and color of the selected scene.
     """
     result = get_connection().send_command("get_selected_scene", {})
-    return result
+    return cast(SelectedSceneInfo, result)
 
 
 def set_selected_scene(scene_index: int) -> str:
@@ -532,10 +535,13 @@ def set_scene_tempo(scene_index: int, tempo: float) -> str:
         scene_index: Zero-based index of the scene.
         tempo: Tempo in BPM, or -1.0 to clear.
     """
-    result = get_connection().send_command("set_scene_tempo", {
-        "scene_index": scene_index,
-        "tempo": tempo,
-    })
+    result = get_connection().send_command(
+        "set_scene_tempo",
+        {
+            "scene_index": scene_index,
+            "tempo": tempo,
+        },
+    )
     return json.dumps(result)
 
 
@@ -547,11 +553,14 @@ def set_scene_time_signature(scene_index: int, numerator: int, denominator: int)
         numerator: Time signature numerator (e.g., 4 for 4/4).
         denominator: Time signature denominator (e.g., 4 for 4/4).
     """
-    result = get_connection().send_command("set_scene_time_signature", {
-        "scene_index": scene_index,
-        "numerator": numerator,
-        "denominator": denominator,
-    })
+    result = get_connection().send_command(
+        "set_scene_time_signature",
+        {
+            "scene_index": scene_index,
+            "numerator": numerator,
+            "denominator": denominator,
+        },
+    )
     return json.dumps(result)
 
 
@@ -561,13 +570,13 @@ def get_application_info() -> ApplicationInfo:
     Returns major_version, minor_version, and bugfix_version.
     """
     result = get_connection().send_command("get_application_info", {})
-    return result
+    return cast(ApplicationInfo, result)
 
 
 def get_livemcp_info() -> LiveMCPInfo:
     """Get LiveMCP remote-script transport capability information."""
     result = get_connection().send_command("get_livemcp_info", {})
-    return result
+    return cast(LiveMCPInfo, result)
 
 
 def get_livemcp_status() -> LiveMCPStatus:
@@ -631,7 +640,7 @@ def get_livemcp_status() -> LiveMCPStatus:
                 "Max bridge is not currently reachable; Max for Live patcher tools will fail until a local bridge session is available."
             )
 
-    return status
+    return cast(LiveMCPStatus, status)
 
 
 def get_validation_readiness() -> ValidationReadinessInfo:
@@ -661,18 +670,14 @@ def get_validation_readiness() -> ValidationReadinessInfo:
             result["selected_track"] = get_selected_track()
         except Exception as exc:
             result["selected_track_error"] = str(exc)
-            result["warnings"].append(
-                "Could not read the currently selected track from Ableton."
-            )
+            result["warnings"].append("Could not read the currently selected track from Ableton.")
 
         try:
             device_info = get_selected_device()
             result["selected_device"] = device_info.get("selected_device")
         except Exception as exc:
             result["selected_device_error"] = str(exc)
-            result["warnings"].append(
-                "Could not read the currently selected device from Ableton."
-            )
+            result["warnings"].append("Could not read the currently selected device from Ableton.")
 
     if not result["remote_reachable"]:
         result["suggested_next_steps"].append(
@@ -684,9 +689,7 @@ def get_validation_readiness() -> ValidationReadinessInfo:
         )
     else:
         device_name = result["selected_device"].get("device_name") or "selected device"
-        result["suggested_next_steps"].append(
-            f"Ready for Live-side validation of {device_name}."
-        )
+        result["suggested_next_steps"].append(f"Ready for Live-side validation of {device_name}.")
 
     if not result["max_bridge_reachable"]:
         result["suggested_next_steps"].append(
@@ -736,12 +739,7 @@ def confirm_validation_target(
     Provide at least one expected selector. Track and device names match
     case-insensitively after trimming whitespace.
     """
-    if (
-        track_index is None
-        and track_name is None
-        and device_index is None
-        and device_name is None
-    ):
+    if track_index is None and track_name is None and device_index is None and device_name is None:
         raise ValueError(
             "Provide at least one expected track/device selector to confirm the validation target."
         )
@@ -798,14 +796,14 @@ def confirm_validation_target(
             f"track index {actual_track_index}" if actual_track_index is not None else "no track"
         )
         actual_device_desc = actual_device_name or (
-            f"device index {actual_device_index}" if actual_device_index is not None else "no device"
+            f"device index {actual_device_index}"
+            if actual_device_index is not None
+            else "no device"
         )
-        message = (
-            "Expected {} but Ableton currently has {} / {} selected.".format(
-                ", ".join(expected_bits) or "the requested validation target",
-                actual_track_desc,
-                actual_device_desc,
-            )
+        message = "Expected {} but Ableton currently has {} / {} selected.".format(
+            ", ".join(expected_bits) or "the requested validation target",
+            actual_track_desc,
+            actual_device_desc,
         )
 
     result: ValidationTargetConfirmationInfo = {
@@ -837,7 +835,7 @@ def get_application_dialog() -> ApplicationDialogInfo:
     Returns open dialog count, current dialog message, and current dialog button count.
     """
     result = get_connection().send_command("get_application_dialog", {})
-    return result
+    return cast(ApplicationDialogInfo, result)
 
 
 def press_current_dialog_button(index: int) -> str:
@@ -859,7 +857,7 @@ def get_application_cpu_usage() -> str:
 def get_available_main_views() -> MainViewsInfo:
     """Get the canonical Ableton view names accepted by view control tools."""
     result = get_connection().send_command("get_available_main_views", {})
-    return result
+    return cast(MainViewsInfo, result)
 
 
 def is_view_visible(view_name: str) -> ViewVisibilityInfo:
@@ -870,7 +868,7 @@ def is_view_visible(view_name: str) -> ViewVisibilityInfo:
                    'Detail', 'Detail/Clip', or 'Detail/DeviceChain'.
     """
     result = get_connection().send_command("is_view_visible", {"view_name": view_name})
-    return result
+    return cast(ViewVisibilityInfo, result)
 
 
 def show_view(view_name: str) -> str:
@@ -1033,13 +1031,13 @@ def get_view_state() -> ViewStateInfo:
     Returns the selected track, detail clip (if any), draw mode, and follow song state.
     """
     result = get_connection().send_command("get_view_state", {})
-    return result
+    return cast(ViewStateInfo, result)
 
 
 def get_selected_device() -> SelectedDeviceInfo:
     """Get the currently selected device on the selected track."""
     result = get_connection().send_command("get_selected_device", {})
-    return result
+    return cast(SelectedDeviceInfo, result)
 
 
 def select_device(track_index: int, device_index: int) -> str:
@@ -1049,23 +1047,26 @@ def select_device(track_index: int, device_index: int) -> str:
         track_index: Zero-based index of the track.
         device_index: Zero-based index of the device in the track's device chain.
     """
-    result = get_connection().send_command("select_device", {
-        "track_index": track_index,
-        "device_index": device_index,
-    })
+    result = get_connection().send_command(
+        "select_device",
+        {
+            "track_index": track_index,
+            "device_index": device_index,
+        },
+    )
     return json.dumps(result)
 
 
 def get_selected_parameter() -> SelectedParameterInfo:
     """Get the currently selected Ableton device parameter."""
     result = get_connection().send_command("get_selected_parameter", {})
-    return result
+    return cast(SelectedParameterInfo, result)
 
 
 def get_selected_chain() -> SelectedChainInfo:
     """Get the currently selected rack chain in Ableton's UI."""
     result = get_connection().send_command("get_selected_chain", {})
-    return result
+    return cast(SelectedChainInfo, result)
 
 
 def set_follow_song(enabled: bool) -> str:
@@ -1095,10 +1096,13 @@ def select_clip_in_detail(track_index: int, clip_index: int) -> str:
         track_index: Zero-based index of the track.
         clip_index: Zero-based index of the clip slot.
     """
-    result = get_connection().send_command("select_clip_in_detail", {
-        "track_index": track_index,
-        "clip_index": clip_index,
-    })
+    result = get_connection().send_command(
+        "select_clip_in_detail",
+        {
+            "track_index": track_index,
+            "clip_index": clip_index,
+        },
+    )
     return json.dumps(result)
 
 
@@ -1179,7 +1183,7 @@ def get_session_metadata() -> SessionMetadataInfo:
     and current_cpu_load (if available).
     """
     result = get_connection().send_command("get_session_metadata", {})
-    return result
+    return cast(SessionMetadataInfo, result)
 
 
 def get_song_smpte_time() -> SongSmpteTimeInfo:
@@ -1188,7 +1192,7 @@ def get_song_smpte_time() -> SongSmpteTimeInfo:
     Returns hours, minutes, seconds, and frames.
     """
     result = get_connection().send_command("get_song_smpte_time", {})
-    return result
+    return cast(SongSmpteTimeInfo, result)
 
 
 def get_scene_info(scene_index: int) -> SceneInfo:
@@ -1201,7 +1205,7 @@ def get_scene_info(scene_index: int) -> SceneInfo:
         scene_index: Zero-based index of the scene.
     """
     result = get_connection().send_command("get_scene_info", {"scene_index": scene_index})
-    return result
+    return cast(SceneInfo, result)
 
 
 def get_scene_clips(scene_index: int) -> str:

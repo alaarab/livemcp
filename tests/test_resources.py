@@ -17,7 +17,7 @@ class ResourceTests(unittest.TestCase):
         templates = anyio.run(server.mcp.list_resource_templates)
 
         resource_uris = {str(resource.uri) for resource in resources}
-        template_uris = {template.uriTemplate for template in templates}
+        template_uris = {template.uri_template for template in templates}
         max_resource_uris = {uri for uri in resource_uris if uri.startswith("max://")}
 
         self.assertIn("live://status", resource_uris)
@@ -112,7 +112,9 @@ class ResourceTests(unittest.TestCase):
         self.assertIn("Max bridge", payload["warnings"][0])
 
     @mock.patch("livemcp.resources.session.get_livemcp_status")
-    def test_max_status_resource_filters_only_max_warnings_case_insensitively(self, get_livemcp_status):
+    def test_max_status_resource_filters_only_max_warnings_case_insensitively(
+        self, get_livemcp_status
+    ):
         get_livemcp_status.return_value = {
             "remote_reachable": False,
             "remote_error": "socket timeout",

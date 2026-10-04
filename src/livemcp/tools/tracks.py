@@ -45,10 +45,13 @@ def set_track_name(track_index: int, name: str) -> str:
         track_index: Zero-based index of the track.
         name: New name for the track.
     """
-    result = get_connection().send_command("set_track_name", {
-        "track_index": track_index,
-        "name": name,
-    })
+    result = get_connection().send_command(
+        "set_track_name",
+        {
+            "track_index": track_index,
+            "name": name,
+        },
+    )
     return json.dumps(result)
 
 
@@ -134,10 +137,13 @@ def set_track_color(track_index: int, color_index: int) -> str:
         track_index: Zero-based index of the track.
         color_index: Ableton color palette index.
     """
-    result = get_connection().send_command("set_track_color", {
-        "track_index": track_index,
-        "color_index": color_index,
-    })
+    result = get_connection().send_command(
+        "set_track_color",
+        {
+            "track_index": track_index,
+            "color_index": color_index,
+        },
+    )
     return json.dumps(result)
 
 
@@ -148,10 +154,13 @@ def set_scene_name(scene_index: int, name: str) -> str:
         scene_index: Zero-based index of the scene.
         name: New name for the scene.
     """
-    result = get_connection().send_command("set_scene_name", {
-        "scene_index": scene_index,
-        "name": name,
-    })
+    result = get_connection().send_command(
+        "set_scene_name",
+        {
+            "scene_index": scene_index,
+            "name": name,
+        },
+    )
     return json.dumps(result)
 
 
@@ -162,10 +171,13 @@ def set_scene_color(scene_index: int, color_index: int) -> str:
         scene_index: Zero-based index of the scene.
         color_index: Ableton color palette index.
     """
-    result = get_connection().send_command("set_scene_color", {
-        "scene_index": scene_index,
-        "color_index": color_index,
-    })
+    result = get_connection().send_command(
+        "set_scene_color",
+        {
+            "scene_index": scene_index,
+            "color_index": color_index,
+        },
+    )
     return json.dumps(result)
 
 
@@ -192,14 +204,19 @@ def set_track_monitoring(track_index: int, state: int) -> str:
         track_index: Zero-based index of the track.
         state: Monitoring state (0=In, 1=Auto, 2=Off).
     """
-    result = get_connection().send_command("set_track_monitoring", {
-        "track_index": track_index,
-        "state": state,
-    })
+    result = get_connection().send_command(
+        "set_track_monitoring",
+        {
+            "track_index": track_index,
+            "state": state,
+        },
+    )
     return json.dumps(result)
 
 
-def set_track_input_routing(track_index: int, routing_type_name: str, routing_channel_name: str = None) -> str:
+def set_track_input_routing(
+    track_index: int, routing_type_name: str, routing_channel_name: str | None = None
+) -> str:
     """Set the input routing for a track.
 
     Use get_track_routing to see available routing type names.
@@ -216,7 +233,9 @@ def set_track_input_routing(track_index: int, routing_type_name: str, routing_ch
     return json.dumps(result)
 
 
-def set_track_output_routing(track_index: int, routing_type_name: str, routing_channel_name: str = None) -> str:
+def set_track_output_routing(
+    track_index: int, routing_type_name: str, routing_channel_name: str | None = None
+) -> str:
     """Set the output routing for a track.
 
     Use get_track_routing to see available routing type names.
@@ -240,10 +259,13 @@ def fold_track(track_index: int, fold: int) -> str:
         track_index: Zero-based index of the group track.
         fold: 1 to fold (collapse), 0 to unfold (expand).
     """
-    result = get_connection().send_command("fold_track", {
-        "track_index": track_index,
-        "fold": fold,
-    })
+    result = get_connection().send_command(
+        "fold_track",
+        {
+            "track_index": track_index,
+            "fold": fold,
+        },
+    )
     return json.dumps(result)
 
 
@@ -256,9 +278,12 @@ def get_track_freeze_status(track_index: int) -> str:
     Returns whether the track is frozen and whether it can be frozen.
     Note: Freezing/flattening cannot be triggered via the API (read-only status).
     """
-    result = get_connection().send_command("get_track_freeze_status", {
-        "track_index": track_index,
-    })
+    result = get_connection().send_command(
+        "get_track_freeze_status",
+        {
+            "track_index": track_index,
+        },
+    )
     return json.dumps(result)
 
 
@@ -281,9 +306,12 @@ def get_track_output_meter(track_index: int) -> str:
     Args:
         track_index: Zero-based index of the track.
     """
-    result = get_connection().send_command("get_track_output_meter", {
-        "track_index": track_index,
-    })
+    result = get_connection().send_command(
+        "get_track_output_meter",
+        {
+            "track_index": track_index,
+        },
+    )
     return json.dumps(result)
 
 
@@ -297,10 +325,13 @@ def get_clip_slot_status(track_index: int, clip_index: int) -> str:
         track_index: Zero-based index of the track.
         clip_index: Zero-based index of the clip slot.
     """
-    result = get_connection().send_command("get_clip_slot_status", {
-        "track_index": track_index,
-        "clip_index": clip_index,
-    })
+    result = get_connection().send_command(
+        "get_clip_slot_status",
+        {
+            "track_index": track_index,
+            "clip_index": clip_index,
+        },
+    )
     return json.dumps(result)
 
 
@@ -312,9 +343,12 @@ def get_return_track_sends(return_index: int) -> str:
     Args:
         return_index: Zero-based index of the return track.
     """
-    result = get_connection().send_command("get_return_track_sends", {
-        "return_index": return_index,
-    })
+    result = get_connection().send_command(
+        "get_return_track_sends",
+        {
+            "return_index": return_index,
+        },
+    )
     return json.dumps(result)
 
 
@@ -326,11 +360,14 @@ def set_clip_slot_color(track_index: int, clip_index: int, color: int) -> str:
         clip_index: Zero-based index of the clip slot.
         color: Color value (raw integer color, not color index).
     """
-    result = get_connection().send_command("set_clip_slot_color", {
-        "track_index": track_index,
-        "clip_index": clip_index,
-        "color": color,
-    })
+    result = get_connection().send_command(
+        "set_clip_slot_color",
+        {
+            "track_index": track_index,
+            "clip_index": clip_index,
+            "color": color,
+        },
+    )
     return json.dumps(result)
 
 
@@ -342,23 +379,26 @@ def set_return_track_send(return_index: int, send_index: int, value: float) -> s
         send_index: Zero-based index of the send on the return track.
         value: Send value (0.0 to 1.0).
     """
-    result = get_connection().send_command("set_return_track_send", {
-        "return_index": return_index,
-        "send_index": send_index,
-        "value": value,
-    })
+    result = get_connection().send_command(
+        "set_return_track_send",
+        {
+            "return_index": return_index,
+            "send_index": send_index,
+            "value": value,
+        },
+    )
     return json.dumps(result)
 
 
 def set_track_properties(
     track_index: int,
-    name: str = None,
-    volume: float = None,
-    pan: float = None,
-    mute: bool = None,
-    solo: bool = None,
-    arm: bool = None,
-    color: int = None,
+    name: str | None = None,
+    volume: float | None = None,
+    pan: float | None = None,
+    mute: bool | None = None,
+    solo: bool | None = None,
+    arm: bool | None = None,
+    color: int | None = None,
 ) -> str:
     """Set multiple track properties in a single call.
 
@@ -429,12 +469,15 @@ def create_take_lane_midi_clip(
         start_time: Clip start position in beats.
         length: Clip length in beats.
     """
-    result = get_connection().send_command("create_take_lane_midi_clip", {
-        "track_index": track_index,
-        "take_lane_index": take_lane_index,
-        "start_time": start_time,
-        "length": length,
-    })
+    result = get_connection().send_command(
+        "create_take_lane_midi_clip",
+        {
+            "track_index": track_index,
+            "take_lane_index": take_lane_index,
+            "start_time": start_time,
+            "length": length,
+        },
+    )
     return json.dumps(result)
 
 
@@ -452,12 +495,15 @@ def create_take_lane_audio_clip(
         file_path: Absolute path to the audio file to load.
         start_time: Clip start position in beats.
     """
-    result = get_connection().send_command("create_take_lane_audio_clip", {
-        "track_index": track_index,
-        "take_lane_index": take_lane_index,
-        "file_path": file_path,
-        "start_time": start_time,
-    })
+    result = get_connection().send_command(
+        "create_take_lane_audio_clip",
+        {
+            "track_index": track_index,
+            "take_lane_index": take_lane_index,
+            "file_path": file_path,
+            "start_time": start_time,
+        },
+    )
     return json.dumps(result)
 
 
