@@ -14,14 +14,15 @@ jobs:
     name: lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@v10.2.0
         with:
           python-version: "3.12"
           enable-cache: true
+          prune-cache: true
       - name: Sync dev dependencies
-        run: uv sync --group dev
+        run: uv sync --locked --group dev
       - name: Ruff
         run: uv run ruff check src/livemcp/
 
@@ -35,14 +36,15 @@ jobs:
         # under Ableton's embedded 3.11, which is inside this range.
         python-version: ["3.10", "3.11", "3.12", "3.13"]
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@v10.2.0
         with:
           python-version: ${{ matrix.python-version }}
           enable-cache: true
+          prune-cache: true
       - name: Sync dev dependencies
-        run: uv sync --group dev
+        run: uv sync --locked --group dev
       # No Ableton on a runner: these are unit tests over socket doubles, the
       # tool registry, the installer and packaging. Anything needing a live
       # Live session is collected but skipped unless LIVEMCP_RUN_LIVE_TESTS=1.
@@ -54,8 +56,8 @@ jobs:
     name: remote script compiles
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v7.0.0
         with:
           python-version: "3.11"
       # The remote script runs inside Ableton's interpreter and is never
