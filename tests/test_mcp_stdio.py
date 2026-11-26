@@ -75,7 +75,7 @@ class MCPStdioTests(unittest.TestCase):
                     self.assertIsNotNone(connected.session.initialize_result)
                 client = connected.session
                 tools = {tool.name: tool for tool in (await client.list_tools()).tools}
-                self.assertEqual(len(tools), 220)
+                self.assertEqual(len(tools), 221)
                 self.assertIn("tempo", tools["set_tempo"].input_schema["properties"])
                 self.assertIn("tempo", tools["get_session_info"].output_schema["properties"])
                 templates = await client.list_resource_templates()

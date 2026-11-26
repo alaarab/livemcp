@@ -169,5 +169,139 @@ class SetDeviceParameterTests(unittest.TestCase):
                           "parameter_index": 0, "value": 5.0})
 
 
+class _SwapTrack:
+    """A track whose device list supports delete_device, like the LOM."""
+
+    def __init__(self, devices):
+        self.devices = devices
+
+    def delete_device(self, index):
+        del self.devices[index]
+
+
+class _SwapView:
+    def __init__(self):
+        self.selected_track = None
+        self.selected_device = None
+
+    def select_device(self, device):
+        self.selected_device = device
+
+
+class _BrowserItem:
+    def __init__(self, name):
+        self.name = name
+        self.uri = "userlibrary:" + name
+        self.is_loadable = True
+        self.children = []
+
+
+class _SwapBrowser:
+    """Loads over the hotswap target if one is set, else after the selection."""
+
+    def __init__(self, view, honour_hotswap=True, at_end=False):
+        self.view = view
+        self.honour_hotswap = honour_hotswap
+        self.at_end = at_end
+        self.hotswap_target = None
+        self.user_library = _BrowserItem("User Library")
+        self.loaded_with_target = []
+
+    def load_item(self, item):
+        track = self.view.selected_track
+        new = StrictDevice(item.name.replace(".amxd", ""), [FakeParameter("Device On", 1.0)])
+        self.loaded_with_target.append(self.hotswap_target)
+        if self.honour_hotswap and self.hotswap_target is not None:
+            track.devices[track.devices.index(self.hotswap_target)] = new
+        elif self.at_end:
+            track.devices.append(new)
+        else:
+            track.devices.insert(track.devices.index(self.view.selected_device) + 1, new)
+
+
+class _SwapSong(FakeSong):
+    def move_device(self, device, track, index):
+        track.devices.remove(device)
+        track.devices.insert(index, device)
+
+
+class _SwapSurface:
+    def __init__(self, track, browser, view):
+        self._song = _SwapSong([track])
+        self._song.view = view
+        self._app = type("App", (), {"browser": browser})()
+
+    def song(self):
+        return self._song
+
+    def application(self):
+        return self._app
+
+    def log_message(self, _msg):
+        pass
+
+
+def _swap_rig(honour_hotswap=True, at_end=False):
+    devices = [StrictDevice(n, [FakeParameter("Device On", 1.0)]) for n in ("EQ", "My Gain", "Utility")]
+    track = _SwapTrack(devices)
+    view = _SwapView()
+    browser = _SwapBrowser(view, honour_hotswap, at_end)
+    browser.user_library.children = [_BrowserItem("My Gain v2.amxd")]
+    return _SwapSurface(track, browser, view), track, browser
+
+
+class ReplaceDeviceTests(unittest.TestCase):
+    def test_hotswap_replaces_in_place_and_clears_the_target(self):
+        surface, track, browser = _swap_rig()
+        result = device_handlers.replace_device(
+            surface, {"track_index": 0, "device_index": 1, "uri": "My Gain v2.amxd"})
+        self.assertEqual([d.name for d in track.devices], ["EQ", "My Gain v2", "Utility"])
+        self.assertTrue(result["in_place"])
+        self.assertEqual(result["replaced_device"], "My Gain")
+        self.assertEqual(result["device_name"], "My Gain v2")
+        self.assertEqual(browser.loaded_with_target[0].name, "My Gain")
+        self.assertIsNone(browser.hotswap_target)
+
+    def test_insert_beside_falls_back_to_deleting_the_old_device(self):
+        surface, track, _browser = _swap_rig(honour_hotswap=False)
+        result = device_handlers.replace_device(
+            surface, {"track_index": 0, "device_index": 1, "uri": "My Gain v2.amxd"})
+        self.assertEqual([d.name for d in track.devices], ["EQ", "My Gain v2", "Utility"])
+        self.assertFalse(result["in_place"])
+
+    def test_device_appended_at_the_end_is_moved_into_the_slot(self):
+        surface, track, _browser = _swap_rig(honour_hotswap=False, at_end=True)
+        result = device_handlers.replace_device(
+            surface, {"track_index": 0, "device_index": 1, "uri": "My Gain v2.amxd"})
+        self.assertEqual([d.name for d in track.devices], ["EQ", "My Gain v2", "Utility"])
+        self.assertFalse(result["in_place"])
+
+    def test_unknown_item_leaves_the_chain_untouched(self):
+        surface, track, browser = _swap_rig()
+        with self.assertRaisesRegex(ValueError, "Browser item not found"):
+            device_handlers.replace_device(
+                surface, {"track_index": 0, "device_index": 1, "uri": "Nope.amxd"})
+        self.assertEqual([d.name for d in track.devices], ["EQ", "My Gain", "Utility"])
+        self.assertIsNone(browser.hotswap_target)
+
+    def test_user_library_path_resolves_without_scanning_every_category(self):
+        surface, track, _browser = _swap_rig()
+        from remote_script.LiveMCP import browser as browser_module
+        original = browser_module.find_item_by_uri
+        browser_module.find_item_by_uri = lambda *a, **k: self.fail("scanned by URI")
+        try:
+            device_handlers.replace_device(
+                surface, {"track_index": 0, "device_index": 1,
+                          "uri": "user_library/My Gain v2.amxd"})
+        finally:
+            browser_module.find_item_by_uri = original
+        self.assertEqual(track.devices[1].name, "My Gain v2")
+
+    def test_missing_uri_is_rejected(self):
+        surface, _track, _browser = _swap_rig()
+        with self.assertRaisesRegex(ValueError, "uri"):
+            device_handlers.replace_device(surface, {"track_index": 0, "device_index": 1})
+
+
 if __name__ == "__main__":
     unittest.main()

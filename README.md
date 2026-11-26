@@ -9,7 +9,7 @@ It gives an MCP client two useful layers:
 
 The point is control and inspection. LiveMCP is built for tasks like selecting tracks, focusing views, firing clips, changing device parameters, checking transport state, handling startup dialogs, and keeping the remote script in sync with the package. It is not trying to be an AI songwriter.
 
-[![Tools](https://img.shields.io/badge/Tools-220-blueviolet)](https://github.com/alaarab/livemcp) [![Python](https://img.shields.io/badge/Python-3.10+-3776AB)](https://python.org) [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+[![Tools](https://img.shields.io/badge/Tools-221-blueviolet)](https://github.com/alaarab/livemcp) [![Python](https://img.shields.io/badge/Python-3.10+-3776AB)](https://python.org) [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
 ## What It Is
 
@@ -25,7 +25,7 @@ The point is control and inspection. LiveMCP is built for tasks like selecting t
 
 ## At A Glance
 
-- `220` tools across session, clips, tracks, devices, mixer, arrangement, grooves, docs, and Max patcher control
+- `221` tools across session, clips, tracks, devices, mixer, arrangement, grooves, docs, and Max patcher control
 - controller-oriented MCP resources like `live://status`, `live://view/current`, `live://track/{track_index}`, and `max://selected-device`
 - local docs sync and offline search across official Ableton and Cycling '74 documentation
 - packaged install-status and Ableton restart helpers
@@ -197,7 +197,7 @@ Config file locations:
 
 ## Capability Map
 
-You do not need to memorize 220 commands to use LiveMCP well. The useful mental model is:
+You do not need to memorize 221 commands to use LiveMCP well. The useful mental model is:
 
 - session tools for transport, selection, views, dialogs, and global state
 - track and mixer tools for routing, arm/solo/mute, levels, and return paths
@@ -214,13 +214,13 @@ The tables below are the full reference.
 | Session | 76 |
 | Clips | 40 |
 | Tracks | 32 |
-| Devices | 27 |
+| Devices | 28 |
 | Mixer | 14 |
 | Arrangement | 9 |
 | Grooves | 5 |
 | Docs | 4 |
 | Max | 13 |
-| **Total** | **220** |
+| **Total** | **221** |
 
 ## MCP Resources
 
@@ -385,6 +385,7 @@ These are meant for controller-style reads where a client wants stable Ableton s
 | `get_drum_pads` / `set_drum_pad_mute` / `set_drum_pad_solo` | Drum rack pads |
 | `delete_device` / `delete_master_device` / `delete_return_device` | Remove devices |
 | `move_device` / `enable_device` | Reorder and enable/disable |
+| `replace_device` | Swap a device for a browser item in place (e.g. reload a rebuilt Max device) |
 
 </details>
 
@@ -471,7 +472,7 @@ rather than falling back to GUI scripting.
 │                Package-Side MCP Server                   │
 │            src/livemcp/ (MCPServer)                      │
 │                                                          │
-│   220 tools + live://, max://, and docs:// resources     │
+│   221 tools + live://, max://, and docs:// resources     │
 │   structured controller state + action calls             │
 └────────────────────────┬────────────────────────────────┘
                          │ TCP Socket (localhost:9877)
@@ -550,7 +551,7 @@ LIVEMCP_RUN_LIVE_TESTS=1 uv run pytest tests/live -v
 uv run ruff check src tests
 uv run ty check src/livemcp/
 
-# Tool registration sanity check (expected: 220)
+# Tool registration sanity check (expected: 221)
 uv run python -c "from livemcp.server import mcp; print(len(mcp._tool_manager._tools), 'tools')"
 ```
 

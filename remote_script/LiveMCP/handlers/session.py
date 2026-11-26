@@ -387,7 +387,7 @@ def get_selected_track(control_surface, params):
             "type": track_type,
             "mute": track.mute,
             "solo": track.solo,
-            "arm": track.arm,
+            "arm": track.arm if track.can_be_armed else False,
             "color_index": track.color_index,
         }
     except ValueError:
