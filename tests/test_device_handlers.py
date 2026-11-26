@@ -268,6 +268,19 @@ class ReplaceDeviceTests(unittest.TestCase):
         self.assertEqual([d.name for d in track.devices], ["EQ", "My Gain", "Utility"])
         self.assertIsNone(browser.hotswap_target)
 
+    def test_user_library_path_resolves_without_scanning_every_category(self):
+        surface, track, _browser = _swap_rig()
+        from remote_script.LiveMCP import browser as browser_module
+        original = browser_module.find_item_by_uri
+        browser_module.find_item_by_uri = lambda *a, **k: self.fail("scanned by URI")
+        try:
+            device_handlers.replace_device(
+                surface, {"track_index": 0, "device_index": 1,
+                          "uri": "user_library/My Gain v2.amxd"})
+        finally:
+            browser_module.find_item_by_uri = original
+        self.assertEqual(track.devices[1].name, "My Gain v2")
+
     def test_missing_uri_is_rejected(self):
         surface, _track, _browser = _swap_rig()
         with self.assertRaisesRegex(ValueError, "uri"):

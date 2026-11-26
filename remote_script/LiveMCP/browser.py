@@ -48,21 +48,24 @@ def load_browser_item(control_surface, browser, track, item_uri):
 def resolve_browser_item(browser, item_uri, log):
     """Find a browser item using a 3-strategy fallback, or raise ValueError.
 
-    Strategy 1: Direct URI match across all categories
-    Strategy 2: Path-based navigation (parses URI into folder path)
+    Strategy 1: Path-based navigation (parses URI into folder path)
+    Strategy 2: Direct URI match across all categories
     Strategy 3: Recursive name search in user_library
-    """
-    # Strategy 1: URI match
-    item = find_item_by_uri(browser, item_uri, log)
 
-    # Strategy 2: Path navigation
+    Path navigation runs first because it only walks the named folders. The
+    URI match walks every Core Library category before it reaches the User
+    Library, which is slow on a full library and delays device reloads.
+    """
+    # Strategy 1: Path navigation
+    item = navigate_to_item(browser, item_uri, log)
+
+    # Strategy 2: URI match
     if not item:
-        log("LiveMCP: URI search failed, trying path navigation for: {0}".format(item_uri))
-        item = navigate_to_item(browser, item_uri, log)
+        item = find_item_by_uri(browser, item_uri, log)
 
     # Strategy 3: Name search in user library
     if not item:
-        log("LiveMCP: Path nav failed, trying name search")
+        log("LiveMCP: URI and path lookup failed, trying name search")
         target = extract_name_from_uri(item_uri)
         if target and hasattr(browser, "user_library"):
             item = search_by_name(browser.user_library, target, log)
