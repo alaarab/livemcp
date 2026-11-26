@@ -199,9 +199,10 @@ class _BrowserItem:
 class _SwapBrowser:
     """Loads over the hotswap target if one is set, else after the selection."""
 
-    def __init__(self, view, honour_hotswap=True):
+    def __init__(self, view, honour_hotswap=True, at_end=False):
         self.view = view
         self.honour_hotswap = honour_hotswap
+        self.at_end = at_end
         self.hotswap_target = None
         self.user_library = _BrowserItem("User Library")
         self.loaded_with_target = []
@@ -212,13 +213,21 @@ class _SwapBrowser:
         self.loaded_with_target.append(self.hotswap_target)
         if self.honour_hotswap and self.hotswap_target is not None:
             track.devices[track.devices.index(self.hotswap_target)] = new
+        elif self.at_end:
+            track.devices.append(new)
         else:
             track.devices.insert(track.devices.index(self.view.selected_device) + 1, new)
 
 
+class _SwapSong(FakeSong):
+    def move_device(self, device, track, index):
+        track.devices.remove(device)
+        track.devices.insert(index, device)
+
+
 class _SwapSurface:
     def __init__(self, track, browser, view):
-        self._song = FakeSong([track])
+        self._song = _SwapSong([track])
         self._song.view = view
         self._app = type("App", (), {"browser": browser})()
 
@@ -232,11 +241,11 @@ class _SwapSurface:
         pass
 
 
-def _swap_rig(honour_hotswap=True):
+def _swap_rig(honour_hotswap=True, at_end=False):
     devices = [StrictDevice(n, [FakeParameter("Device On", 1.0)]) for n in ("EQ", "My Gain", "Utility")]
     track = _SwapTrack(devices)
     view = _SwapView()
-    browser = _SwapBrowser(view, honour_hotswap)
+    browser = _SwapBrowser(view, honour_hotswap, at_end)
     browser.user_library.children = [_BrowserItem("My Gain v2.amxd")]
     return _SwapSurface(track, browser, view), track, browser
 
@@ -255,6 +264,13 @@ class ReplaceDeviceTests(unittest.TestCase):
 
     def test_insert_beside_falls_back_to_deleting_the_old_device(self):
         surface, track, _browser = _swap_rig(honour_hotswap=False)
+        result = device_handlers.replace_device(
+            surface, {"track_index": 0, "device_index": 1, "uri": "My Gain v2.amxd"})
+        self.assertEqual([d.name for d in track.devices], ["EQ", "My Gain v2", "Utility"])
+        self.assertFalse(result["in_place"])
+
+    def test_device_appended_at_the_end_is_moved_into_the_slot(self):
+        surface, track, _browser = _swap_rig(honour_hotswap=False, at_end=True)
         result = device_handlers.replace_device(
             surface, {"track_index": 0, "device_index": 1, "uri": "My Gain v2.amxd"})
         self.assertEqual([d.name for d in track.devices], ["EQ", "My Gain v2", "Utility"])

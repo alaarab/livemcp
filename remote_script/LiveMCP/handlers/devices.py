@@ -747,8 +747,9 @@ def replace_device(control_surface, params):
     """Swap a track's device for a browser item, keeping its chain position.
 
     Uses the browser's hotswap target so Live replaces the device in place.
-    If Live inserts the new device beside the old one instead, the old one is
-    deleted, so either way the new device ends up at ``device_index``.
+    If Live adds the new device elsewhere in the chain instead (after the
+    selection or at the end), the old one is deleted and the new one moved
+    into its slot, so either way the new device ends up at ``device_index``.
     Parameter values are not carried over: a Max device's parameters appear
     only once its patcher has loaded, after this call returns.
     """
@@ -763,7 +764,7 @@ def replace_device(control_surface, params):
     browser = control_surface.application().browser
     item = resolve_browser_item(browser, uri, control_surface.log_message)
     old_name = device.name
-    count_before = len(track.devices)
+    before = list(track.devices)
 
     song.view.selected_track = track
     song.view.select_device(device)
@@ -773,10 +774,13 @@ def replace_device(control_surface, params):
     finally:
         browser.hotswap_target = None
 
-    in_place = len(track.devices) == count_before
+    in_place = len(track.devices) == len(before)
     if not in_place:
-        # Loaded after the selected (old) device instead of over it.
-        track.delete_device(device_index)
+        added = [d for d in track.devices if not any(d == b for b in before)]
+        if len(added) != 1:
+            raise ValueError("Expected one new device on the track, found {0}".format(len(added)))
+        track.delete_device(list(track.devices).index(device))
+        song.move_device(added[0], track, device_index)
     new_device = track.devices[device_index]
     return {
         "track_index": track_index,
