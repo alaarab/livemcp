@@ -38,14 +38,20 @@ def get_browser_root(browser, root_name):
 
 
 def load_browser_item(control_surface, browser, track, item_uri):
-    """Load a browser item onto a track using 3-strategy fallback.
+    """Load a browser item onto a track (see resolve_browser_item for lookup)."""
+    item = resolve_browser_item(browser, item_uri, control_surface.log_message)
+    control_surface.song().view.selected_track = track
+    browser.load_item(item)
+    return {"loaded": True, "item_name": item.name, "track_name": track.name, "uri": item_uri}
+
+
+def resolve_browser_item(browser, item_uri, log):
+    """Find a browser item using a 3-strategy fallback, or raise ValueError.
 
     Strategy 1: Direct URI match across all categories
     Strategy 2: Path-based navigation (parses URI into folder path)
     Strategy 3: Recursive name search in user_library
     """
-    log = control_surface.log_message
-
     # Strategy 1: URI match
     item = find_item_by_uri(browser, item_uri, log)
 
@@ -63,10 +69,7 @@ def load_browser_item(control_surface, browser, track, item_uri):
 
     if not item:
         raise ValueError("Browser item not found: {0}".format(item_uri))
-
-    control_surface.song().view.selected_track = track
-    browser.load_item(item)
-    return {"loaded": True, "item_name": item.name, "track_name": track.name, "uri": item_uri}
+    return item
 
 
 def _uri_variants(uri):

@@ -501,6 +501,28 @@ def move_device(track_index: int, device_index: int, new_index: int) -> str:
     return json.dumps(result)
 
 
+def replace_device(track_index: int, device_index: int, uri: str) -> str:
+    """Replace a device on a track with a browser item, keeping its chain position.
+
+    Useful for reloading a rebuilt Max for Live device from the User Library.
+    Parameter values are not carried over.
+
+    Args:
+        track_index: Zero-based index of the track.
+        device_index: Zero-based index of the device to replace.
+        uri: Browser URI (or User Library name) of the replacement.
+    """
+    result = get_connection().send_command(
+        "replace_device",
+        {
+            "track_index": track_index,
+            "device_index": device_index,
+            "uri": uri,
+        },
+    )
+    return json.dumps(result)
+
+
 def enable_device(track_index: int, device_index: int, enabled: bool) -> str:
     """Enable or disable a device on a track.
 
@@ -547,5 +569,6 @@ TOOLS = [
     delete_master_device,
     delete_return_device,
     move_device,
+    replace_device,
     enable_device,
 ]

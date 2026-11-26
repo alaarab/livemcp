@@ -4,6 +4,7 @@ from ..browser import get_browser_tree as _get_browser_tree
 from ..browser import get_items_at_path as _get_items_at_path
 from ..browser import load_browser_item as _load_browser_item
 from ..browser import find_item_by_uri, navigate_to_item, search_by_name, extract_name_from_uri
+from ..browser import resolve_browser_item
 
 
 def _get_device(song, params):
@@ -742,6 +743,52 @@ def move_device(control_surface, params):
     }
 
 
+def replace_device(control_surface, params):
+    """Swap a track's device for a browser item, keeping its chain position.
+
+    Uses the browser's hotswap target so Live replaces the device in place.
+    If Live inserts the new device beside the old one instead, the old one is
+    deleted, so either way the new device ends up at ``device_index``.
+    Parameter values are not carried over: a Max device's parameters appear
+    only once its patcher has loaded, after this call returns.
+    """
+    song = control_surface.song()
+    track, device = _get_device(song, params)
+    track_index = int(params["track_index"])
+    device_index = int(params["device_index"])
+    uri = params.get("uri")
+    if not uri:
+        raise ValueError("Missing required parameter: uri")
+
+    browser = control_surface.application().browser
+    item = resolve_browser_item(browser, uri, control_surface.log_message)
+    old_name = device.name
+    count_before = len(track.devices)
+
+    song.view.selected_track = track
+    song.view.select_device(device)
+    browser.hotswap_target = device
+    try:
+        browser.load_item(item)
+    finally:
+        browser.hotswap_target = None
+
+    in_place = len(track.devices) == count_before
+    if not in_place:
+        # Loaded after the selected (old) device instead of over it.
+        track.delete_device(device_index)
+    new_device = track.devices[device_index]
+    return {
+        "track_index": track_index,
+        "device_index": device_index,
+        "replaced_device": old_name,
+        "device_name": new_device.name,
+        "item_name": item.name,
+        "in_place": in_place,
+        "uri": uri,
+    }
+
+
 def enable_device(control_surface, params):
     """Enable or disable a device on a track.
 
@@ -813,5 +860,6 @@ WRITE_HANDLERS = {
     "delete_master_device": delete_master_device,
     "delete_return_device": delete_return_device,
     "move_device": move_device,
+    "replace_device": replace_device,
     "enable_device": enable_device,
 }
